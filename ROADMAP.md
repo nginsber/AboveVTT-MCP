@@ -348,36 +348,69 @@ Each step adds a few tools. You test it in Frozen Sick, and the next step starts
   5. "Make Cultist Large and give it 60 ft darkvision", then place another.
   6. Clean up: delete the placed test tokens by hand, then "Delete the MCP Test creature folder with everything in it." Claude asks first.
 
-### Step 12 — Tokens on scenes
+### Step 12 — Tokens on scenes ✅ (v0.12.0; 0.12.1 waits up to ~12 s when checking another scene and shows condition durations)
 
 - **Tools:**
-  - `list_scene_tokens`: tokens on the scene, with name, ID and HP/AC summary.
-  - `get_token`: everything about one token.
-  - `update_token`: change any of the items below, one or many at once.
-  - `set_token_note`: create or edit the token's note.
-- **What you can change** (all confirmed in AboveVTT's code):
+  - `list_scene_tokens`: the tokens on a scene (the DM's current scene unless another is named), with kind (player / monster / custom creature / token), HP, AC, size, conditions, hidden and whether it has a note. Doors, walls and AoE templates are left out unless asked for.
+  - `get_token`: everything about one token, including its other images, auras, vision/light, settings, linked stat block and note.
+  - `update_token`: change any of these, one or many at once, with `dryRun` to preview:
+    - **Name** (the token's note is retitled too, as AboveVTT does).
+    - **AC.**
+    - **HP:** max HP, current HP, temp HP, or `damage` / `heal`. Damage comes off temp HP first; healing stops at max HP. If a token with the Concentration marker takes damage, the reply gives the save DC (10 or half the damage).
+    - **Conditions and markers:** the 15 standard conditions, AboveVTT's named markers (Concentration, Reaction Used, Flying, Burning, Rage, Blessed, Baned, Bloodied, Advantage, Disadvantage, Bardic Inspiration, Hasted) and the 10 coloured markers with your own text. Optional duration in rounds. Add, remove or clear all.
+    - **Auras:** inner/outer, feet and colour. Setting an aura switches "show auras" on.
+    - **Darkvision, inner/outer light, border colour.**
+    - **Image:** a new link (the old one stays as an alternative, like AboveVTT's change-image panel) or one of the token's other images.
+    - **Size:** Tiny to Gargantuan or a number of squares.
+    - **Token settings:** any per-token setting, e.g. hidden, reveal name, square style, hide HP bar.
+  - `set_token_note`: create, change (replace/append/prepend), share (DM only / all players / named players) or delete a token's note. Deleting is previewed and asked about first.
+- **Player characters:** their name, HP, AC and standard conditions come from the D&D Beyond sheet; AboveVTT only whispers the player if the DM tries. The tool refuses those and says so. Markers, auras, vision, image, size, settings and notes work.
+- **How it saves:**
+  - **DM's current scene:** changes the live token like AboveVTT's token menu, then `place_sync_persist()` (redraw + save + send to players). Hidden/shown goes through `hide()` / `show()`, size through `Token.size()`. The combat tracker copy is updated too.
+  - **Other scenes (experimental):** reads the scene with `AboveApi.getScene`, sends the changed token with AboveVTT's own `custom/myVTT/token` message addressed to that scene (what `Token.sync(sceneId)` does), then reads the scene back after a moment and says whether the change was saved. Your test: the Abjurer Archmage's AC change on Map 2.1 was saved, but only showed up after a few seconds, so 0.12.1 checks for longer.
+- **Also in this release (step 11 fixes):**
+  - Creature sizes saved as a D&D Beyond size id (like Skrix) now show their real size instead of "default"; no size at all shows as "Small/Medium (default)".
+  - The image count counts each link once. (Fire Mage really does have 99 images.)
+  - Stat block text from D&D Beyond puts each ability score on one line.
+- **Tested:** against AboveVTT 1.61's real `Token` class (HP getters, `hasCondition`, conditions list), its condition lists and token settings (`test/tokens.test.mjs`), plus all earlier tests.
+- **Your test in Frozen Sick** (on the DM's current scene, with a monster or custom creature token placed by hand, e.g. a Cultist):
+  1. "What tokens are on this scene?"
+  2. "Rename Cultist to Cult Leader, set AC 15, max HP 30, HP 22 and 5 temp HP."
+  3. "Cult Leader takes 8 damage." (Expect 19/30, no temp HP.) Then "Heal Cult Leader 50." (Expect 30/30.)
+  4. "Make Cult Leader Poisoned and Prone for 2 rounds, add a red marker saying Hexed."
+  5. "Give Cult Leader a 10 ft red aura and 60 ft darkvision, make it Large, and turn on hide HP bar."
+  6. "Change Cult Leader's image to <a link>."
+  7. "Add a DM-only note to Cult Leader: Carries the cellar key." Then "Share it with all players."
+  8. Optional, experimental: "Set the AC of <a token on another scene> to 18," then open that scene to see whether it stuck.
+  9. Clean up by hand, or "Delete Cult Leader's note" (Claude asks first) and delete the token yourself.
 
-  | Item | AboveVTT field |
-  |---|---|
-  | Name | `name` |
-  | AC | `armorClass` |
-  | HP, max HP, temp HP | `hitPointInfo.current`, `.maximum`, `.temp` |
-  | Conditions | Standard conditions (Blinded, Poisoned, …) in `conditions`, set through AboveVTT's `addCondition` / `removeCondition`. Custom conditions with your own name and text in `custom_conditions`. |
-  | Auras | Two auras (`aura1`, `aura2`), each with a radius in feet and a colour. Also show/hide, hide from players, and colour by health. |
-  | Token image | `imgsrc` (by link), plus the token's alternative images |
-  | Token settings | The per-token options AboveVTT shows in the token's settings: token style, base style, hidden, square, locked, restrict player movement, reveal in fog, under darkness, disable/hide stat block, hide HP bar, disable border, disable aura, percent HP bar, reveal name, always show name, legacy aspect ratio, allow measurement |
-  | Token note | A note attached to the token (the same as right-click → note on the map), DM-only or visible to players, through AboveVTT's journal |
+### Step 13 — Music library and playlists ✅ (v0.13.0)
 
-- **How:** change the token's own fields, then AboveVTT's `place_sync_persist()`. That redraws the token and saves it, exactly as if you had used the token menu.
-- **Which scenes:**
-  - **The scene you have open as DM:** fully supported. This is how AboveVTT itself edits tokens.
-  - **Other scenes:** AboveVTT's sync messages can target another scene, but whether the change is kept still has to be tested. Until then, the tool will ask you to open the scene first.
-- **Note:** if players are connected, they see changes to the open scene straight away, as with any DM edit. Changes to token settings like "hidden" therefore take effect for them immediately.
-- **Test:** on The Tavern, place a token by hand. Then have Claude rename it, set AC 15 and HP 22/30 with 5 temp, add Poisoned plus a custom "Marked" condition, give it a 10 ft red aura, swap its image, turn on "hide HP bar", and add a DM-only note.
+- **What AboveVTT 1.61 actually has:**
+  - **Track library** (Sounds tab): tracks with a name, a link and tags. It lives in this Chrome's local storage and is **shared by all your campaigns**.
+  - **Soundpads** from older AboveVTT versions were converted by AboveVTT into tags, so "soundpads" are now just tags.
+  - **Mixer playlists**, per campaign. Each holds its own copies of tracks; one is loaded in the mixer at a time.
+- **Tools:**
+  - `list_tracks` (search, or one tag), with how many tracks each tag has.
+  - `add_tracks`: up to 50 at once by public link, with tags. A link already in the library is skipped; a taken name gets a number.
+  - `update_track`: rename, change link, set / add / remove tags.
+  - `delete_tracks`: by name, id, or every track with a tag. Previewed and asked about first.
+  - `list_playlists`, `create_playlist` (from track names or a tag, optional loop), `update_playlist` (rename, add, remove), `delete_playlist` (asked first).
+- **Never plays anything:**
+  - A new or edited playlist that isn't loaded in the mixer is saved as plain data: no sound, nothing sent to players.
+  - The loaded playlist's tracks can only be changed while the mixer is paused, and new tracks go in paused.
+  - Loading a playlist, playing, pausing and volume stay with you, and the loaded playlist can't be deleted.
+- **How it saves:** `TRACK_LIBRARY._write()` (saves and redraws the Sounds panel, like the Add Track button) and the mixer's own `_write()`.
+- **Not here:** uploading audio files (needs Patreon storage), token sounds placed on maps (live-session).
+- **Tested:** against AboveVTT 1.61's real `Library`, `TrackLibrary` and `Mixer` classes (`test/music.test.mjs`): AboveVTT's own `find()` sees added tracks, creating a playlist triggers no audio sync, the loaded playlist is refused while playing.
+- **Your test in Frozen Sick:**
+  1. "List my music." (Shows what's already in the library and its tags.)
+  2. "Add a track 'MCP Test Rain' from <a public mp3 link>, tagged MCP Test and Ambience." Check it appears in the Sounds tab.
+  3. "Tag MCP Test Rain with Weather too, and rename it MCP Test Storm."
+  4. "Create a playlist 'MCP Test' with every MCP Test track, looping." Check the playlist dropdown in the mixer; nothing should start playing.
+  5. "List my playlists."
+  6. Clean up: "Delete the MCP Test playlist" and "Delete every track tagged MCP Test." Claude asks first each time.
 
-### Step 13 — Music and soundpads
-
-- **Tools:** `list_tracks`, `add_track` (by link), `remove_track`, and soundpad tools. These manage the music library only; there's no playing or pausing during a session.
 
 ### Later phase — Two-PC sync
 

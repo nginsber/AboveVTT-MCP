@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AboveVTT MCP Bridge",
-  "version": "0.13.0",
+  "version": "0.15.0",
   "description": "Lets a local MCP server (used by Claude desktop) work with AboveVTT in your D&D Beyond campaign tab.",
   "minimum_chrome_version": "116",
   "permissions": [
@@ -34,7 +34,8 @@
         "notes.js",
         "creatures.js",
         "tokens.js",
-        "music.js"
+        "music.js",
+        "characters.js"
       ],
       "world": "MAIN",
       "run_at": "document_idle"
@@ -51,5 +52,9 @@
       ],
       "run_at": "document_idle"
     }
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
   ]
 }

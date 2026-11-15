@@ -25,6 +25,7 @@ You need to be the **DM**, with the campaign open in Chrome and AboveVTT running
 ### Scenes
 - **`list_scenes`**: the scene tree with folders, and which scene you and the players are on.
 - **`get_scene_config` / `update_scene_config`**: read and change the settings in a scene's ⚙ dialog: name, map links, grid (on/off, colour, line width, square size), darkness, weather, vision, snap and more. It saves through AboveVTT's own dialog code, without switching the scene you're on.
+- **`detect_grid`**: reads a scene's map image and finds the grid printed on it (square size, offset, dark or light lines), then sets AboveVTT's manual grid data so the two line up, the job of AboveVTT's Super Mega Wizard. It says so when a map has no printed grid. Needs a one-time "Allow reading map images" click on the extension's options page.
 - **`create_scene`**: create up to 25 scenes at once, at the top or in a folder, with any of those settings (for example a map link, grid on, 5 ft squares).
 - **`create_folder` / `rename_folder`**: scene folders, including folders inside folders, with colours.
 - **`move_scene`**: move scenes and folders between folders.
@@ -74,6 +75,10 @@ You need to be the **DM**, with the campaign open in Chrome and AboveVTT running
 ### Music
 - **`list_tracks` / `add_tracks` / `update_track` / `delete_tracks`**: the Sounds tab's track library, added by public link (for example Dropbox), with **tags**. Tags are how AboveVTT now groups the old soundpads.
 - **`list_playlists` / `create_playlist` / `update_playlist` / `delete_playlist`**: the mixer's playlists. A playlist can be built from track names or from everything with a tag.
+
+### Player characters (read-only)
+- **`list_characters`**: the party from D&D Beyond, with player, class and level, AC, HP, passive Perception, speed, conditions, inspiration and death saves.
+- **`get_character`**: one full sheet: abilities and saves, skills, attacks, spell DC, senses, defences, proficiencies, class features, feats, spells and slots, inventory, money, background and personality. The player's own notes (backstory, allies…) are only included when you ask. Nothing is ever changed on D&D Beyond.
 
 ---
 

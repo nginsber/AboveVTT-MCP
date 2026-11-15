@@ -78,6 +78,8 @@ You don't need to run `npm install`. `server\dist\abovevtt-mcp.mjs` is already b
 4. From the puzzle-piece menu, **pin** "AboveVTT MCP Bridge" so you can see its badge.
 5. Click the extension's icon to open its options page. Paste the token, leave the port at **47321**, and click **Save and connect**.
 
+6. Optional, for grid detection: on the same options page click **Allow reading map images** and accept Chrome's prompt. This lets the extension download a scene's map image to measure its grid. You can remove it again from the same page.
+
 The badge shows the connection state:
 
 | Badge | Meaning |

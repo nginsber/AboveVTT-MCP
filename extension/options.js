@@ -25,6 +25,20 @@ $("save").addEventListener("click", async () => {
   setTimeout(refresh, 800);
 });
 
+const ORIGINS = ["https://*/*", "http://*/*"];
+async function refreshImageAccess() {
+  const has = await chrome.permissions.contains({ origins: ORIGINS });
+  $("imageState").textContent = has ? "✓ Allowed. Grid detection can read map images." : "Not allowed yet.";
+  $("imageAccess").textContent = has ? "Remove permission to read map images" : "Allow reading map images";
+  $("imageAccess").dataset.has = has ? "1" : "";
+}
+$("imageAccess").addEventListener("click", async () => {
+  if ($("imageAccess").dataset.has) await chrome.permissions.remove({ origins: ORIGINS });
+  else await chrome.permissions.request({ origins: ORIGINS });
+  refreshImageAccess();
+});
+
 load();
 refresh();
+refreshImageAccess();
 setInterval(refresh, 2000);
