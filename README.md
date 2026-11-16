@@ -30,6 +30,7 @@ You need to be the **DM**, with the campaign open in Chrome and AboveVTT running
 - **`create_folder` / `rename_folder`**: scene folders, including folders inside folders, with colours.
 - **`move_scene`**: move scenes and folders between folders.
 - **`delete_scene` / `delete_folder`**: delete a scene, or a folder in either of AboveVTT's two ways (move its contents up, or delete everything inside). It won't delete the scene you or the players are on.
+- **`get_fog` / `set_fog`**: a scene's fog of war. `set_fog` does what the two ALL buttons on the FOG menu do, **hide all** or **reveal all**, on any scene, without opening it. Unlike those buttons it can be undone: the old fog is saved first, and `set_fog` with **restore** puts it back. Drawing individual fog shapes isn't supported.
 
 ### Backups and the Settings tab
 - **`export_backup`**: AboveVTT's EXPORT button. It downloads a `.abovevtt` backup of the whole campaign to your Downloads folder.
@@ -85,7 +86,7 @@ You need to be the **DM**, with the campaign open in Chrome and AboveVTT running
 ## Safety
 
 - **Claude asks before anything permanent.** Deletes and imports are previewed first (`dryRun`), and Claude has to wait for your "yes" in chat. AboveVTT's own pop-up confirmations are not used, because they would freeze the connection.
-- **No live-session control.** The connector doesn't switch the players' scene, place tokens on the map, or play, pause or change the volume of music. Those stay with you. It won't edit the playlist that's loaded in the mixer while music is playing.
+- **No live-session control.** The connector doesn't switch the players' scene, place tokens on the map, or play, pause or change the volume of music. Those stay with you. It won't edit the playlist that's loaded in the mixer while music is playing. The one exception is `set_fog`: if players are on that scene, they see the fog change at once. By your choice it runs without asking first; the old fog is always saved so it can be restored.
 - **Everything is checked before saving.** Unknown setting names, bad colours, links that aren't http(s), duplicate names and similar mistakes are caught before anything is changed.
 - **Change log.** Every change is added to `%USERPROFILE%\.abovevtt-mcp\change-log.jsonl`. Ask Claude *"show the change log"*.
 - **Local only.** The server listens on `127.0.0.1` only. It accepts only the Chrome extension, which has to present a secret token stored in `%USERPROFILE%\.abovevtt-mcp\bridge-token.txt`. Nothing is sent anywhere else. Like any connector, what Claude reads from your campaign (notes, stat blocks, scene names) becomes part of your Claude conversation.
