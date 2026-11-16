@@ -39,7 +39,7 @@
   const folderType = () => (typeof ItemType !== "undefined" ? ItemType.Folder : "folder");
 
   const AVTT_MCP = {
-    version: "0.16.0",
+    version: "0.17.1",
     register(name, fn) { handlers[name] = fn; },
     /** Lets one handler reuse another (e.g. create_scene applying update_scene_config). */
     invoke(name, params) {

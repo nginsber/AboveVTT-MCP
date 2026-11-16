@@ -40745,7 +40745,7 @@ function safeEqual(a, b) {
 }
 
 // src/version.js
-var SERVER_VERSION = "0.16.1";
+var SERVER_VERSION = "0.17.1";
 var TESTED_ABOVEVTT_VERSIONS = ["1.61"];
 
 // src/tools/status.js
@@ -40878,12 +40878,12 @@ function logChange(bridge2, { tool, params, summary }) {
       if (fs2.statSync(CHANGE_LOG_FILE).size > MAX_BYTES) fs2.renameSync(CHANGE_LOG_FILE, CHANGE_LOG_FILE + ".old");
     } catch {
     }
-    const tab12 = (bridge2?.tabs || []).find((t) => t.isDM) || bridge2?.tabs?.[0];
+    const tab13 = (bridge2?.tabs || []).find((t) => t.isDM) || bridge2?.tabs?.[0];
     const { tabId, ...rest } = params || {};
     const entry = {
       time: (/* @__PURE__ */ new Date()).toISOString(),
       tool,
-      campaign: tab12?.campaignName ?? tab12?.gameId ?? null,
+      campaign: tab13?.campaignName ?? tab13?.gameId ?? null,
       params: rest,
       summary
     };
@@ -42624,6 +42624,88 @@ function register15(server2, bridge2) {
   });
 }
 
+// src/tools/copy_tokens.js
+var copy_tokens_exports = {};
+__export(copy_tokens_exports, {
+  register: () => register16
+});
+var tab12 = { tabId: external_exports.number().int().optional().describe("Only needed if several AboveVTT tabs are open.") };
+var ok9 = (text) => ({ content: [{ type: "text", text }] });
+var SOURCE = external_exports.enum(["scene", "monster", "open5e", "aboveVTT", "ddbToken"]);
+function hitLine(h) {
+  const bits = [];
+  if (h.cr) bits.push(`CR ${h.cr}`);
+  if (h.books?.length) bits.push(h.books.join(", "));
+  if (h.legacy) bits.push("legacy");
+  if (h.owned === false) bits.push("not owned on D&D Beyond");
+  if (h.folder) bits.push(h.folder);
+  return `\u2022 ${h.name} [${h.id}]${bits.length ? ` \u2014 ${bits.join("; ")}` : ""}`;
+}
+function register16(server2, bridge2) {
+  server2.registerTool("find_tokens_to_copy", {
+    title: "Find tokens to copy into My Tokens",
+    description: "Search the Tokens tab's sources by name: Monsters (D&D Beyond monster search, using the Tokens tab's monster filters), Open5e Monsters, AboveVTT Tokens and D&D Beyond Tokens. Returns names and ids for copy_to_my_tokens. For tokens already on a scene use list_scene_tokens instead. Area of Effect templates can't be copied.",
+    inputSchema: {
+      query: external_exports.string().describe("Name or part of a name."),
+      source: external_exports.enum(["monster", "open5e", "aboveVTT", "ddbToken"]).optional().describe("Only search this source (default: all four)."),
+      ...tab12
+    },
+    annotations: { readOnlyHint: true }
+  }, async ({ tabId, ...p }) => {
+    try {
+      const r = await bridge2.call("find_tokens_to_copy", p, { tabId, timeoutMs: 45e3 });
+      const titles = { monster: "Monsters (D&D Beyond)", open5e: "Open5e Monsters", aboveVTT: "AboveVTT Tokens", ddbToken: "D&D Beyond Tokens" };
+      const lines = [`Matches for '${r.query}':`];
+      for (const [s, list2] of Object.entries(r.results)) {
+        lines.push("", `${titles[s]} (source "${s}"): ${list2.length ? "" : "none"}`);
+        list2.forEach((h) => lines.push(hitLine(h)));
+      }
+      for (const [s, e] of Object.entries(r.errors || {})) lines.push("", `${titles[s]}: couldn't search (${e})`);
+      return ok9(lines.join("\n"));
+    } catch (e) {
+      return errorResult(e.message);
+    }
+  });
+  server2.registerTool("copy_to_my_tokens", {
+    title: "Copy tokens into My Tokens",
+    description: `Copy up to 25 tokens into My Tokens as custom creatures, like AboveVTT's "Copy to My Tokens" / "Duplicate", into any My Tokens folder and under any name. Each item has a source:
+\u2022 scene: a token already placed (name or tokenId; sceneId/sceneName, default the DM's current scene). Copies its image(s), size, auras, vision/light and token settings \u2014 not its position, current HP, conditions or note. Its stat block is copied (custom creature), fetched (D&D Beyond / Open5e monster), or made from its AC and max HP (plain token). By default the copy uses the token's AC and max HP if they differ from the stat block; keepOriginalStats: true keeps the stat block's.
+\u2022 monster (D&D Beyond) or open5e: by exact name or id (from find_tokens_to_copy). Gets an editable custom stat block built from the monster, its image, size and senses. Monsters the user doesn't own on D&D Beyond are copied without stats.
+\u2022 aboveVTT / ddbToken: AboveVTT Tokens / D&D Beyond Tokens by name or id (images and settings, no stats).
+Player characters, doors/walls and Area of Effect templates can't be copied. A name already used in the folder gets a number.`,
+    inputSchema: {
+      items: external_exports.array(external_exports.object({
+        source: SOURCE,
+        name: external_exports.string().optional().describe("Exact name (token name on the scene, monster name, or token name in the Tokens tab)."),
+        id: external_exports.string().optional().describe("monster / open5e / aboveVTT / ddbToken: id from find_tokens_to_copy."),
+        tokenId: external_exports.string().optional().describe("scene: token id from list_scene_tokens."),
+        sceneId: external_exports.string().optional(),
+        sceneName: external_exports.string().optional(),
+        newName: external_exports.string().optional().describe("Name for the copy (default: the original's name)."),
+        keepOriginalStats: external_exports.boolean().optional().describe("scene: keep the stat block's AC / max HP instead of the token's.")
+      })).min(1).max(25),
+      folderId: external_exports.string().optional().describe("My Tokens folder id (default: top level)."),
+      folderName: external_exports.string().optional().describe("Or: the My Tokens folder's exact name."),
+      ...tab12
+    }
+  }, async ({ tabId, ...p }) => {
+    try {
+      const r = await bridge2.call("copy_to_my_tokens", p, { tabId, timeoutMs: 6e4 + 3e4 * p.items.length });
+      const lines = [`Copied ${r.copied.length} of ${p.items.length} into ${r.folder}:`];
+      for (const c of r.copied) {
+        const stats2 = [c.ac !== void 0 ? `AC ${c.ac}` : null, c.hp !== void 0 ? `HP ${c.hp}${c.hitDice ? ` (${c.hitDice})` : ""}` : null, c.cr ? `CR ${c.cr}` : null, c.size].filter(Boolean).join(", ");
+        lines.push(`\u2022 ${c.name} [${c.id}] \u2190 ${c.from}${stats2 ? ` \u2014 ${stats2}` : ""}; stat block: ${c.statBlock}${c.renamed ? ` (${c.renamed})` : ""}`);
+        for (const n of c.notes || []) lines.push(`    ${n}`);
+      }
+      for (const f of r.failed) lines.push(`\u2717 ${f.item}${f.source ? ` (${f.source})` : ""}: ${f.error}`);
+      if (r.copied.length) logChange(bridge2, { tool: "copy_to_my_tokens", params: { ...p, tabId }, summary: lines.join("\n") });
+      return r.copied.length ? ok9(lines.join("\n")) : errorResult(lines.join("\n"));
+    } catch (e) {
+      return errorResult(e.message);
+    }
+  });
+}
+
 // src/index.js
 var port = Number(process.env.AVTT_BRIDGE_PORT || 47321);
 var token = loadOrCreateToken();
@@ -42636,7 +42718,7 @@ var server = new McpServer(
     instructions: "Tools for the AboveVTT virtual tabletop running in the DM's Chrome tab on D&D Beyond. If a tool fails, call `status` to see what is missing (extension, tab, DM role)."
   }
 );
-for (const tool of [status_exports, scenes_exports, scene_config_exports, scene_folders_exports, backup_exports, scene_create_exports, settings_exports, settings_actions_exports, notes_exports, creatures_exports, tokens_exports, music_exports, characters_exports, grid_exports, fog_exports]) tool.register(server, bridge);
+for (const tool of [status_exports, scenes_exports, scene_config_exports, scene_folders_exports, backup_exports, scene_create_exports, settings_exports, settings_actions_exports, notes_exports, creatures_exports, tokens_exports, music_exports, characters_exports, grid_exports, fog_exports, copy_tokens_exports]) tool.register(server, bridge);
 var exiting = false;
 function shutdown(reason) {
   if (exiting) return;
