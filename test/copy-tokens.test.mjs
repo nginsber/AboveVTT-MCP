@@ -100,7 +100,7 @@ check("ambiguous monster name lists both books", r.failed?.[0]?.error.includes("
 r = R(await call("copy_to_my_tokens", { items: [{ source: "monster", id: "5195300" }, { source: "monster", name: "Goblin Boss", newName: "Boss Grik" }], folderName: "Frozen Sick" }));
 const g = byName("Goblin 2"), bg = byName("Boss Grik");
 check("monster copy: numbered name in folder", r.copied.length === 2 && g && g.parentId === "f1", JSON.stringify(r));
-check("monster copy: image, size, darkvision, customStat", g.tokenOptions.imgsrc === "https://x/goblin24.png" && g.tokenOptions.alternativeImages[0] === "https://x/goblin24.png" && g.tokenOptions.sizeId === 3 && g.tokenOptions.vision.feet === "60" && g.tokenOptions.monster === "customStat", JSON.stringify(g.tokenOptions));
+check("monster copy: image, size, darkvision, customStat", g.tokenOptions.imgsrc === "https://x/goblin24.png" && g.tokenOptions.alternativeImages[0] === "https://x/goblin24.png" && g.tokenOptions.sizeId === 3 && g.tokenOptions.tokenSize === 1 && g.tokenOptions.vision.feet === "60" && g.tokenOptions.monster === "customStat", JSON.stringify(g.tokenOptions));
 check("monster copy: stat block AboveVTT reads", reads(g).armorClass == 15 && reads(g).hitPointInfo.maximum == 7 && reads(bg).armorClass == 17, JSON.stringify(reads(g)));
 check("monster copy: result reports stats", r.copied[1].ac === "17" && r.copied[1].statBlock === "from D&D Beyond", JSON.stringify(r.copied[1]));
 r = R(await call("copy_to_my_tokens", { items: [{ source: "monster", name: "Lich" }] }));
@@ -112,7 +112,7 @@ check("unknown monster", /No Monsters \(D&D Beyond\) match 'Gobbo'/.test(r.faile
 r = R(await call("copy_to_my_tokens", { items: [{ source: "open5e", name: "Owlbear" }] }));
 check("ambiguous Open5e lists documents", /Tome of Beasts/.test(r.failed?.[0]?.error), JSON.stringify(r));
 r = R(await call("copy_to_my_tokens", { items: [{ source: "open5e", id: "srd_owlbear" }] }));
-check("Open5e copy", r.copied[0].name === "Owlbear" && r.copied[0].statBlock === "from Open5e" && reads(byName("Owlbear")).hitPointInfo.maximum == 30, JSON.stringify(r));
+check("Open5e copy (Large → tokenSize 2)", byName("Owlbear")?.tokenOptions.tokenSize === 2 && r.copied[0].size === "Large" && r.copied[0].name === "Owlbear" && r.copied[0].statBlock === "from Open5e" && reads(byName("Owlbear")).hitPointInfo.maximum == 30, JSON.stringify(r));
 
 // ---- AboveVTT / D&D Beyond Tokens
 r = R(await call("copy_to_my_tokens", { items: [{ source: "aboveVTT", name: "barrel" }] }));

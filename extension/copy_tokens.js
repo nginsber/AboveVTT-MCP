@@ -22,6 +22,10 @@
   const clone = (o) => JSON.parse(JSON.stringify(o ?? null));
   const nameOf = (tc) => (typeof tc.name === "function" ? tc.name() : tc.tokenOptions?.name) || "(unnamed)";
   const lc = (s) => String(s ?? "").trim().toLowerCase();
+  // D&D Beyond size ids → squares. AboveVTT places My Tokens by tokenSize and ignores sizeId (a My Token without
+  // tokenSize is placed Small/Medium), so the copy must carry tokenSize. Same mapping as Token.js / TokensPanel.js.
+  const SQUARES_FOR_SIZE_ID = { 2: 0.5, 5: 2, 6: 3, 7: 4 };
+  const squaresForSizeId = (id) => SQUARES_FOR_SIZE_ID[Number(id)] ?? 1;
   const SOURCES = ["scene", "monster", "open5e", "aboveVTT", "ddbToken"];
   const SOURCE_LABEL = { scene: "token on a scene", monster: "Monsters (D&D Beyond)", open5e: "Open5e Monsters", aboveVTT: "AboveVTT Tokens", ddbToken: "D&D Beyond Tokens" };
 
@@ -163,6 +167,7 @@
     const hpps = parseFloat(sceneData?.hpps);
     const squares = !isNaN(sq) ? sq : hpps && parseFloat(o.size) ? +(parseFloat(o.size) / hpps).toFixed(2) : undefined;
     if (squares) opts.tokenSize = squares <= 0.5 ? 0.5 : squares;
+    else if (o.sizeId !== undefined) opts.tokenSize = squaresForSizeId(o.sizeId);
     const imgs = [o.imgsrc, ...(o.alternativeImages || [])].filter((u) => typeof u === "string" && u && !u.startsWith("data:"));
     opts.alternativeImages = [...new Set(imgs)];
     if (o.imgsrc) opts.imgsrc = o.imgsrc;
@@ -259,7 +264,7 @@
       need(["find_token_options_for_list_item", "random_image_for_item"]);
       const found = find_token_options_for_list_item(li) || {};
       const options = { ...clone(found) };
-      if (typeof options.tokenSize !== "number") options.sizeId = li.monsterData.sizeId;
+      if (typeof options.tokenSize !== "number") { options.sizeId = li.monsterData.sizeId; options.tokenSize = squaresForSizeId(li.monsterData.sizeId); }
       let vision = { darkvision: 0, devilsight: 0, truesight: 0 };
       if (li.monsterData?.senses?.length && typeof get_monster_senses === "function") vision = get_monster_senses(li.monsterData.senses, vision);
       const col = (k) => window.TOKEN_SETTINGS?.[k]?.color || "rgba(142, 142, 142, 1)";
@@ -312,7 +317,7 @@
       const sb = monsterStatBlockHtml(monsterLi);
       if (sb.warning) notes.push(sb.warning);
       html = sb.html; statBlock = html ? `from ${o.monster === "open5e" ? "Open5e" : "D&D Beyond"} (${monsterLi.name})` : "none";
-      if (o.sizeId === undefined && options.tokenSize === undefined) options.sizeId = monsterLi.monsterData.sizeId;
+      if (options.tokenSize === undefined) options.tokenSize = squaresForSizeId(o.sizeId ?? monsterLi.monsterData.sizeId);
     }
     // AC / max HP: the token's own values unless keepOriginalStats.
     const ac = o.armorClass !== undefined && o.armorClass !== "" && !isNaN(Number(o.armorClass)) ? Number(o.armorClass) : undefined;

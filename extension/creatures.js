@@ -284,7 +284,9 @@
     Object.assign(d, {
       images: Array.isArray(o.alternativeImages) ? new Set(o.alternativeImages).size : 0,
       size: o.tokenSize !== undefined ? SIZE_NAME[o.tokenSize] ?? `${o.tokenSize} squares`
-        : o.sizeId !== undefined ? SIZE_ID_NAME[o.sizeId] ?? "Small/Medium" : "Small/Medium (default)",
+        // AboveVTT places a My Token by tokenSize only (sizeId is ignored), so report what will actually be placed.
+        : o.sizeId !== undefined && ![3, 4].includes(Number(o.sizeId)) ? `Small/Medium (default — the monster is ${SIZE_ID_NAME[o.sizeId] ?? "another size"}, but AboveVTT places My Tokens by size setting only; set size to fix)`
+        : "Small/Medium (default)",
       hasStatBlock: !!note,
       ...(note ? readStats(note.text) : {}),
     });

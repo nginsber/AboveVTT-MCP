@@ -1,6 +1,6 @@
 {
   "name": "abovevtt-mcp",
-  "version": "0.17.0",
+  "version": "0.17.1",
   "description": "MCP server for AboveVTT (via the AboveVTT MCP Bridge Chrome extension)",
   "scripts": {
     "build": "esbuild src/index.js --bundle --platform=node --format=esm --target=node20 --outfile=dist/abovevtt-mcp.mjs \"--banner:js=import { createRequire as __cr } from 'node:module'; const require = __cr(import.meta.url);\""

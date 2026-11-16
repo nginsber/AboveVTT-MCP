@@ -40745,7 +40745,7 @@ function safeEqual(a, b) {
 }
 
 // src/version.js
-var SERVER_VERSION = "0.17.0";
+var SERVER_VERSION = "0.17.1";
 var TESTED_ABOVEVTT_VERSIONS = ["1.61"];
 
 // src/tools/status.js
