@@ -59,6 +59,7 @@ You need to be the **DM**, with the campaign open in Chrome and AboveVTT running
 
   The stat blocks use the same markers as AboveVTT's stat block editor, so a placed token gets the right **HP, AC and initiative**.
 - **`delete_creature`**, **`create_creature_folder` / `delete_creature_folder`**.
+- **`find_tokens_to_copy` / `copy_to_my_tokens`**: copy into My Tokens (any folder, any name) from a token already on a scene, or from the Tokens tab's **Monsters** (D&D Beyond), **Open5e Monsters**, **AboveVTT Tokens** and **D&D Beyond Tokens**, up to 25 at once. Monsters get an editable stat block built from D&D Beyond or Open5e. A token copied from a scene keeps its image(s), size, auras, vision and settings, and by default its own AC and max HP. Player characters, doors and Area of Effect templates can't be copied.
 
 ### Tokens already on a scene
 - **`list_scene_tokens` / `get_token`**: what's on the map, with HP, AC, size, conditions, whether it's hidden, and its note.

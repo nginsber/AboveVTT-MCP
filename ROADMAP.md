@@ -1,6 +1,6 @@
 # AboveVTT MCP — progress and roadmap
 
-*Updated 15 Nov 2026. Fog hide all / reveal all added (v0.16.0).*
+*Updated 15 Nov 2026. Fog hide all / reveal all (v0.16) and copying tokens into My Tokens (v0.17.0) added.*
 
 ## What this is
 
@@ -429,6 +429,24 @@ Each step adds a few tools. You test it in Frozen Sick, and the next step starts
   2. "Hide all the fog on The Tavern." The map should go fully dark in a player view.
   3. "Reveal all the fog on The Tavern," then "Put The Tavern's fog back to how it was before." The original fog should return.
   4. Pick a scene you're **not** on and hide all its fog. Then open it and check.
+
+### Copy into My Tokens (v0.17.0) — built, waiting for your test
+
+- **Tools:**
+  - `find_tokens_to_copy`: search Monsters (D&D Beyond's monster search, with the Tokens tab's filters), Open5e Monsters, AboveVTT Tokens and D&D Beyond Tokens by name. Shows ids, CR, book (2014 / 2025) and legacy flags.
+  - `copy_to_my_tokens`: up to 25 items, into any My Tokens folder, optional new name (a taken name gets a number). Sources:
+    - **scene**: a token already placed, on the current or another scene. Copies image(s), size, auras, vision/light and token settings, but not position, current HP, conditions, hidden or the token's note. Stat block: copied from a custom creature, fetched for a D&D Beyond / Open5e monster, or made from AC and max HP for a plain token. The token's own AC / max HP go into the copy's stat block when they differ (`keepOriginalStats: true` to keep the book values).
+    - **monster** / **open5e**: by exact name or id. Same as AboveVTT's "Copy to My Tokens": image, size, darkvision/truesight/devil's sight, and an editable custom stat block (`build_monster_copy_stat_block`). A name in more than one book (e.g. Goblin 2014 and 2025) asks which. Monsters you don't own on D&D Beyond are copied without stats.
+    - **aboveVTT** / **ddbToken**: same as AboveVTT's "Copy to My Tokens" for those folders (`duplicate_my_token`): images and settings, no stats.
+  - Refused: player characters, doors/walls, Area of Effect templates (AboveVTT has no copy for them either).
+- **Differences from AboveVTT's menu:** any folder and name, no configuration panel popping up, and the reply says what was copied. Monster details are fetched with `fetch_monsters()` directly, because `fetch_and_cache_monsters` is debounced and drops all but the last of several quick calls.
+- **Tested:** `test/copy-tokens.test.mjs`, against AboveVTT 1.61's real `TokenCustomization`, `SidebarListItem`, `find_token_options_for_list_item`, `random_image_for_item`, `get_monster_senses` and monster caches. AboveVTT's own placement code reads the copies' AC and HP, including the token-value overrides. D&D Beyond / Open5e network calls are stand-ins.
+- **Your test in Frozen Sick:**
+  1. "Find goblin to copy." Check the 2014 / 2025 versions are listed.
+  2. "Copy the 2025 Goblin and the Bugbear Warrior into My Tokens folder <folder>." Check the Tokens tab and open a stat block.
+  3. "Copy a barrel from AboveVTT Tokens."
+  4. Change a placed monster's max HP, then "Copy <that token> to My Tokens." Place the copy and check its HP.
+  5. Clean up with delete_creature.
 
 ### Later phase — Two-PC sync
 

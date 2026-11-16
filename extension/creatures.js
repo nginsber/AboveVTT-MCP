@@ -299,6 +299,12 @@
 
   // Shared with step 12 (tokens already on a scene).
   M.tokenOptionsPatch = optionsPatch;
+  // Shared with copy_to_my_tokens.
+  M.buildStatBlock = buildStatBlock;
+  M.readStats = readStats;
+  M.myTokensFolder = (p) => findFolder(p);
+  M.myTokensPath = pathOf;
+  M.myTokensDescribe = describe;
   M.checkImages = checkImages;
 
   // ---------- handlers ----------------------------------------------------------------------
