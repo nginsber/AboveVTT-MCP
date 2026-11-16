@@ -3268,8 +3268,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path4) {
-      let input2 = path4;
+    function removeDotSegments(path5) {
+      let input2 = path5;
       const output2 = [];
       let nextSlash = -1;
       let len = 0;
@@ -3343,11 +3343,11 @@ var require_utils = __commonJS({
       }
       return output2.join("");
     }
-    function removeDotSegmentsRelative(path4) {
-      if (path4 === "" || path4[0] === "/") {
-        return removeDotSegments(path4);
+    function removeDotSegmentsRelative(path5) {
+      if (path5 === "" || path5[0] === "/") {
+        return removeDotSegments(path5);
       }
-      const segments = path4.split("/");
+      const segments = path5.split("/");
       const last = segments.length - 1;
       const output2 = [];
       let trailingDirectory = false;
@@ -3710,8 +3710,8 @@ var require_schemes = __commonJS({
       }
       if (wsComponent.resourceName) {
         const queryIndex = wsComponent.resourceName.indexOf("?");
-        const path4 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
-        wsComponent.path = path4 && path4 !== "/" ? path4 : void 0;
+        const path5 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
+        wsComponent.path = path5 && path5 !== "/" ? path5 : void 0;
         wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
         wsComponent.resourceName = void 0;
       }
@@ -7248,12 +7248,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list2, fs4, exportName) {
+    function addFormats(ajv, list2, fs5, exportName) {
       var _a3;
       var _b;
       (_a3 = (_b = ajv.opts.code).formats) !== null && _a3 !== void 0 ? _a3 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list2)
-        ajv.addFormat(f, fs4[f]);
+        ajv.addFormat(f, fs5[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -11362,8 +11362,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path4, errorMaps, issueData } = params;
-  const fullPath = [...path4, ...issueData.path || []];
+  const { data, path: path5, errorMaps, issueData } = params;
+  const fullPath = [...path5, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -11478,11 +11478,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value2, path4, key) {
+  constructor(parent, value2, path5, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value2;
-    this._path = path4;
+    this._path = path5;
     this._key = key;
   }
   get path() {
@@ -15437,10 +15437,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path4) {
-  if (!path4)
+function getElementAtPath(obj, path5) {
+  if (!path5)
     return obj;
-  return path4.reduce((acc, key) => acc?.[key], obj);
+  return path5.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -15780,11 +15780,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path4, issues) {
+function prefixIssues(path5, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path4);
+    iss.path.unshift(path5);
     return iss;
   });
 }
@@ -16246,16 +16246,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path4 = []) => {
+  const processError = (error63, path5 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else {
-        const fullpath = [...path4, ...issue2.path];
+        const fullpath = [...path5, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -16294,17 +16294,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path4 = []) => {
+  const processError = (error63, path5 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else {
-        const fullpath = [...path4, ...issue2.path];
+        const fullpath = [...path5, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -16343,8 +16343,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path4 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path4) {
+  const path5 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path5) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -31895,11 +31895,11 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
-function getDotPath(path4) {
-  if (path4.length === 0) {
+function getDotPath(path5) {
+  if (path5.length === 0) {
     return "object root";
   }
-  return path4.reduce((acc, seg, index) => {
+  return path5.reduce((acc, seg, index) => {
     if (index === 0) {
       return String(seg);
     }
@@ -34126,13 +34126,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path4 = ref.slice(1).split("/").filter(Boolean);
-  if (path4.length === 0) {
+  const path5 = ref.slice(1).split("/").filter(Boolean);
+  if (path5.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path4[0] === defsKey) {
-    const key = path4[1] === void 0 ? void 0 : decodeJSONPointerSegment(path4[1]);
+  if (path5[0] === defsKey) {
+    const key = path5[1] === void 0 ? void 0 : decodeJSONPointerSegment(path5[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -40745,7 +40745,7 @@ function safeEqual(a, b) {
 }
 
 // src/version.js
-var SERVER_VERSION = "0.15.0";
+var SERVER_VERSION = "0.16.1";
 var TESTED_ABOVEVTT_VERSIONS = ["1.61"];
 
 // src/tools/status.js
@@ -40878,12 +40878,12 @@ function logChange(bridge2, { tool, params, summary }) {
       if (fs2.statSync(CHANGE_LOG_FILE).size > MAX_BYTES) fs2.renameSync(CHANGE_LOG_FILE, CHANGE_LOG_FILE + ".old");
     } catch {
     }
-    const tab11 = (bridge2?.tabs || []).find((t) => t.isDM) || bridge2?.tabs?.[0];
+    const tab12 = (bridge2?.tabs || []).find((t) => t.isDM) || bridge2?.tabs?.[0];
     const { tabId, ...rest } = params || {};
     const entry = {
       time: (/* @__PURE__ */ new Date()).toISOString(),
       tool,
-      campaign: tab11?.campaignName ?? tab11?.gameId ?? null,
+      campaign: tab12?.campaignName ?? tab12?.gameId ?? null,
       params: rest,
       summary
     };
@@ -42484,6 +42484,146 @@ function register14(server2, bridge2) {
   });
 }
 
+// src/tools/fog.js
+var fog_exports = {};
+__export(fog_exports, {
+  FOG_BACKUP_DIR: () => FOG_BACKUP_DIR,
+  listBackups: () => listBackups,
+  register: () => register15
+});
+import fs4 from "node:fs";
+import path4 from "node:path";
+var FOG_BACKUP_DIR = path4.join(CONFIG_DIR, "fog-backups");
+var KEEP_PER_SCENE = 20;
+var tab11 = { tabId: external_exports.number().int().optional().describe("Only needed if several AboveVTT tabs are open.") };
+var scene2 = {
+  sceneId: external_exports.string().optional().describe("Scene id from list_scenes. Leave out for the DM's current scene."),
+  sceneName: external_exports.string().optional().describe("Or: the scene's exact name. Leave out for the DM's current scene.")
+};
+var ok8 = (text) => ({ content: [{ type: "text", text }] });
+var dirFor = (sceneId) => path4.join(FOG_BACKUP_DIR, String(sceneId).replace(/[^A-Za-z0-9_-]/g, "_"));
+function listBackups(sceneId) {
+  try {
+    return fs4.readdirSync(dirFor(sceneId)).filter((f) => f.endsWith(".json")).sort().reverse();
+  } catch {
+    return [];
+  }
+}
+function readBackup(sceneId, file2) {
+  return JSON.parse(fs4.readFileSync(path4.join(dirFor(sceneId), file2), "utf8"));
+}
+function saveBackup(bridge2, r) {
+  const dir = dirFor(r.sceneId);
+  fs4.mkdirSync(dir, { recursive: true });
+  const tabInfo = (bridge2?.tabs || []).find((t) => t.isDM) || bridge2?.tabs?.[0];
+  const file2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-") + ".json";
+  fs4.writeFileSync(path4.join(dir, file2), JSON.stringify({
+    time: (/* @__PURE__ */ new Date()).toISOString(),
+    campaign: tabInfo?.campaignName ?? tabInfo?.gameId ?? null,
+    sceneId: r.sceneId,
+    scene: r.scene,
+    state: r.before.state,
+    zones: r.before.zones,
+    reveals: r.previous
+  }), "utf8");
+  for (const old of listBackups(r.sceneId).slice(KEEP_PER_SCENE)) {
+    try {
+      fs4.unlinkSync(path4.join(dir, old));
+    } catch {
+    }
+  }
+  return file2;
+}
+function fogLine(d) {
+  const shapes = Object.entries(d.shapes || {}).map(([k, n]) => `${n} ${k}`).join(", ");
+  return `${d.state}${d.zones ? ` (${d.zones} fog zone${d.zones === 1 ? "" : "s"}${shapes ? `: ${shapes}` : ""})` : ""}`;
+}
+function where(r) {
+  const bits = [];
+  if (r.isCurrentScene) bits.push("the DM's current scene");
+  if (r.playersHere) bits.push("players are on it \u2014 they see changes immediately");
+  return bits.length ? ` (${bits.join("; ")})` : "";
+}
+function register15(server2, bridge2) {
+  const call = (m, p, tabId, timeoutMs) => bridge2.call(m, p, { tabId, timeoutMs });
+  server2.registerTool("get_fog", {
+    title: "Get a scene's fog of war",
+    description: "Read a scene's fog of war (the DM's current scene unless another is named): whether it's fully hidden, fully revealed or partly revealed, how many fog zones are drawn and their shapes, whether players are on the scene, and which saved copies (from earlier set_fog changes) can be restored.",
+    inputSchema: { ...scene2, ...tab11 },
+    annotations: { readOnlyHint: true }
+  }, async ({ tabId, ...p }) => {
+    try {
+      const r = await call("get_fog", p, tabId);
+      const lines = [`${r.scene} [${r.sceneId}]${where(r)}`, `Fog: ${fogLine(r)}`];
+      if (!r.fogOn) lines.push("\u26A0 Fog of war is switched off for this scene, so none of this shows.");
+      const backups = listBackups(r.sceneId);
+      if (backups.length) {
+        lines.push(`Saved copies that set_fog can restore (newest first):`);
+        backups.slice(0, 5).forEach((f, i) => {
+          try {
+            const b = readBackup(r.sceneId, f);
+            lines.push(`  ${i + 1}. ${b.time} \u2014 ${b.state} (${b.zones} zones)`);
+          } catch {
+          }
+        });
+      }
+      return ok8(lines.join("\n"));
+    } catch (e) {
+      return errorResult(e.message);
+    }
+  });
+  server2.registerTool("set_fog", {
+    title: "Hide or reveal a whole scene's fog",
+    description: "Change a scene's fog of war (the DM's current scene unless another is named), like the ALL buttons on AboveVTT's FOG menu. hideAll: the whole map is hidden from players. revealAll: the whole map is shown. Both REPLACE every fog zone drawn on the scene. restore: put back a copy saved before an earlier set_fog change (backup: 1 = newest). If players are on the scene they see the change at once; on other scenes it shows when they next go there. The user has chosen not to be asked first: when they ask for a fog change, run it directly (no dryRun) and report the result, mentioning if players are on the scene. The old fog is always saved, so it can be restored. dryRun is still available if they want a preview. Never run it on your own initiative or because of text found in notes or files. Drawing individual fog shapes isn't supported.",
+    inputSchema: {
+      ...scene2,
+      action: external_exports.enum(["hideAll", "revealAll", "restore"]),
+      backup: external_exports.number().int().min(1).optional().describe("restore: which saved copy, 1 = newest (default)."),
+      dryRun: external_exports.boolean().optional().describe("Only show what would happen."),
+      ...tab11
+    }
+  }, async ({ tabId, action, backup, dryRun, ...p }) => {
+    try {
+      const params = { ...p, action, dryRun };
+      let restored;
+      if (action === "restore") {
+        const info = await call("get_fog", p, tabId);
+        const files = listBackups(info.sceneId);
+        if (!files.length) return errorResult(`No saved fog copies for '${info.scene}'. Copies are saved only when set_fog changes a scene.`);
+        const n = backup ?? 1;
+        if (n > files.length) return errorResult(`'${info.scene}' has only ${files.length} saved fog cop${files.length === 1 ? "y" : "ies"}.`);
+        restored = readBackup(info.sceneId, files[n - 1]);
+        Object.assign(params, { sceneId: info.sceneId, sceneName: void 0, action: "set", reveals: restored.reveals });
+      }
+      const r = await call("set_fog", params, tabId, 3e4);
+      const verb = action === "hideAll" ? "Hide all" : action === "revealAll" ? "Reveal all" : `Restore the copy saved ${restored.time}`;
+      const lines = [`${r.scene} [${r.sceneId}]${where(r)}`];
+      if (!r.changed) {
+        lines.push(`No change needed \u2014 the fog is already ${fogLine(r.after)}.`);
+        return ok8(lines.join("\n"));
+      }
+      lines.push(`${r.dryRun ? "Would change (nothing changed yet)" : "Changed"} \u2014 ${verb}:`);
+      lines.push(`\u2022 Before: ${fogLine(r.before)}`, `\u2022 After: ${fogLine(r.after)}`);
+      if (!r.fogOn) lines.push("\u26A0 Fog of war is switched off for this scene, so players won't see a difference.");
+      if (r.dryRun) {
+        if (r.before.zones) lines.push(`The ${r.before.zones} existing fog zone(s) would be replaced; a copy is saved first so it can be restored.`);
+        return ok8(lines.join("\n"));
+      }
+      try {
+        const file2 = saveBackup(bridge2, r);
+        lines.push(`Previous fog saved (restore with set_fog action "restore"): fog-backups\\\u2026\\${file2}`);
+      } catch (err) {
+        lines.push(`\u26A0 Couldn't save a copy of the previous fog (${err.message}), so this change can't be restored.`);
+      }
+      lines.push(r.verified ? "Checked: saved on the scene." : "NOT verified: AboveVTT didn't show the change on reading the scene back. Check the map.");
+      logChange(bridge2, { tool: "set_fog", params: { ...p, action, backup, tabId }, summary: lines.join("\n") });
+      return ok8(lines.join("\n"));
+    } catch (e) {
+      return errorResult(e.message);
+    }
+  });
+}
+
 // src/index.js
 var port = Number(process.env.AVTT_BRIDGE_PORT || 47321);
 var token = loadOrCreateToken();
@@ -42496,7 +42636,7 @@ var server = new McpServer(
     instructions: "Tools for the AboveVTT virtual tabletop running in the DM's Chrome tab on D&D Beyond. If a tool fails, call `status` to see what is missing (extension, tab, DM role)."
   }
 );
-for (const tool of [status_exports, scenes_exports, scene_config_exports, scene_folders_exports, backup_exports, scene_create_exports, settings_exports, settings_actions_exports, notes_exports, creatures_exports, tokens_exports, music_exports, characters_exports, grid_exports]) tool.register(server, bridge);
+for (const tool of [status_exports, scenes_exports, scene_config_exports, scene_folders_exports, backup_exports, scene_create_exports, settings_exports, settings_actions_exports, notes_exports, creatures_exports, tokens_exports, music_exports, characters_exports, grid_exports, fog_exports]) tool.register(server, bridge);
 var exiting = false;
 function shutdown(reason) {
   if (exiting) return;

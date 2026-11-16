@@ -1,6 +1,6 @@
 # AboveVTT MCP — progress and roadmap
 
-*Updated 14 Nov 2026. Review answers recorded; token editing added (step 12).*
+*Updated 15 Nov 2026. Fog hide all / reveal all added (v0.16.0).*
 
 ## What this is
 
@@ -41,7 +41,7 @@ Only scenes are stored on AboveVTT's servers. Custom creatures, tokens, notes an
 | Step order | As listed. Settings tab stays at steps 8–9. |
 | Scene configuration | Through AboveVTT's real configure dialog, run behind the scenes |
 | Deleting and importing | Claude asks you in chat before every delete or import. No confirmation flag, no automatic backup. `export_backup` is still available whenever you want one. |
-| Live-session tools | Not wanted. No switching the players' scene, placing tokens on the map, or playing music from the connector. Editing tokens already on a scene (step 12) is in. |
+| Live-session tools | Not wanted. No switching the players' scene, placing tokens on the map, or playing music from the connector. Editing tokens already on a scene (step 12) is in. Exception (15 Nov): fog hide all / reveal all on any scene, run without asking first (the old fog is always saved and can be restored). Drawing fog shapes stays out. |
 
 ## Completed
 
@@ -411,6 +411,24 @@ Each step adds a few tools. You test it in Frozen Sick, and the next step starts
   5. "List my playlists."
   6. Clean up: "Delete the MCP Test playlist" and "Delete every track tagged MCP Test." Claude asks first each time.
 
+
+### Fog — hide all / reveal all (v0.16.0; 0.16.1 stops asking before each change) — hide/reveal on the current scene confirmed in Prisoner 13
+
+- **How AboveVTT stores fog:** a list of fog zones per scene (`window.REVEALED` for the open scene, `reveals` in the saved scene). An empty list hides the whole map; `[[0,0,0,0,2,0]]` reveals it. The FOG menu's two ALL buttons write exactly those values, then call `redraw_fog()` and `sync_fog()`.
+- **Tools:**
+  - `get_fog`: fully hidden / fully revealed / partly revealed, how many zones and of which shapes, whether players are on the scene, and the saved copies that can be restored.
+  - `set_fog`: `hideAll`, `revealAll` or `restore` (`backup: 1` = newest), with `dryRun`.
+- **Current scene:** the same steps as the ALL buttons, without their confirm() pop-up (it would freeze the connection).
+- **Other scenes:** AboveVTT's own `custom/myVTT/fogdata` message addressed to that scene, like token edits on other scenes. Players on that scene see it at once; otherwise it shows when they next go there.
+- **Checked and undoable:** the scene is read back with `AboveApi.getScene()` (up to ~12 s). Before each change the old fog is saved to `%USERPROFILE%\.abovevtt-mcp\fog-backups\<scene id>\`, keeping the last 20 per scene, and the change is added to the change log. A restore saves a copy too, so it can be undone as well.
+- **Not asked first (your choice, 15 Nov):** Claude runs fog changes directly and reports the result, including whether players are on the scene. `dryRun` still gives a preview on request.
+- **Not here:** drawing or erasing individual fog shapes (live map work).
+- **Tested:** `test/fog.test.mjs` checks that the values match AboveVTT 1.61's ALL buttons in `Fog.js`, and runs AboveVTT's real `sync_fog()` on the current scene, another scene, dry run, no-op, restore and errors. `test/fog-tool.test.mjs` covers the server side: wording, saved copies, restore and the change log.
+- **Your test in Frozen Sick:**
+  1. "What's the fog on The Tavern?"
+  2. "Hide all the fog on The Tavern." The map should go fully dark in a player view.
+  3. "Reveal all the fog on The Tavern," then "Put The Tavern's fog back to how it was before." The original fog should return.
+  4. Pick a scene you're **not** on and hide all its fog. Then open it and check.
 
 ### Later phase — Two-PC sync
 
