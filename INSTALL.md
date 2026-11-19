@@ -65,6 +65,22 @@ You don't need to run `npm install`. `server\dist\abovevtt-mcp.mjs` is already b
 
    If other servers are already listed, add only the `"abovevtt": { … }` part, with a comma after the entry before it.
 
+   > **Note:** If you already have other MCP servers, you may need a comma after the closing `}` of the `abovevtt` entry. Entries are separated by commas: every entry except the **last** one ends with `},`. If `abovevtt` is the last entry, put the comma after the entry before it and **no** comma after `abovevtt`. If you put `abovevtt` before another entry, it needs a comma after its closing `}`. A missing comma, or an extra comma after the last entry, makes the file invalid and Claude won't load any of your local servers. For example:
+   >
+   > ```json
+   > {
+   >   "mcpServers": {
+   >     "some-other-server": {
+   >       "command": "…"
+   >     },
+   >     "abovevtt": {
+   >       "command": "C:\\Program Files\\nodejs\\node.exe",
+   >       "args": ["C:\\Users\\<you>\\AboveVTT-MCP\\server\\dist\\abovevtt-mcp.mjs"]
+   >     }
+   >   }
+   > }
+   > ```
+
    Change the `command` path if `where.exe node` printed a different one, and change the `args` path to your `<folder>`.
 3. Save. **Fully quit** Claude desktop (right-click its icon in the system tray → **Quit**; closing the window isn't enough) and start it again.
 4. **abovevtt** should now appear under **Settings → Desktop app → Extensions → Local MCP servers**.
