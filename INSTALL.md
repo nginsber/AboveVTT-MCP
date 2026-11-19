@@ -18,6 +18,8 @@ About 10 minutes. You'll:
 - A D&D Beyond campaign where **you are the DM**. Test in a throwaway campaign first.
 - **Node.js 20 or newer**. See step 1.
 
+> **Browser-only AI chats won't work.** The connector is a program that runs on your PC, so it needs an AI app that can start a local MCP server on the same PC as Chrome. AI chats used only in a web browser (for example ChatGPT, Gemini, or Claude at claude.ai) can't start local programs, so they can't use this connector. These steps use Claude desktop. Other MCP clients that can start a local server, such as Claude Code or VS Code, should also work, but they haven't been tested.
+
 ---
 
 ## 1. Check for Node.js
