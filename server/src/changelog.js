@@ -14,7 +14,7 @@ export function logChange(bridge, { tool, params, summary }) {
       if (fs.statSync(CHANGE_LOG_FILE).size > MAX_BYTES) fs.renameSync(CHANGE_LOG_FILE, CHANGE_LOG_FILE + ".old");
     } catch { /* no file yet */ }
     const tab = (bridge?.tabs || []).find((t) => t.isDM) || bridge?.tabs?.[0];
-    const { tabId, ...rest } = params || {};
+    const { tabId, confirmToken, dryRun, ...rest } = params || {};
     const entry = {
       time: new Date().toISOString(),
       tool,

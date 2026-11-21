@@ -159,6 +159,88 @@
     if (clean.length > MAX_NOTE_CHARS) throw new Error(`That note would be ${clean.length.toLocaleString()} characters; AboveVTT can only send notes up to about ${MAX_NOTE_CHARS.toLocaleString()} to players. Split it into several notes.`);
     return clean;
   }
+  /**
+   * Find-and-replace inside a note's stored HTML (review item 6). Every pair must match exactly once in the
+   * note as it is now, or, with all: true ("replace all"), at least once; nothing changes unless they all do. With format "text" (default), `find` and `replace`
+   * are plain text: they only match the note's visible text (never tag names or attributes), allow for how
+   * AboveVTT's editor stores &, <, >, quotes and non-breaking spaces, and can't span formatting (e.g. half
+   * bold). With format "html" they're matched against the HTML as is.
+   * @returns {{ html: string, results: Array<{ find, replace, all, count, places: Array<{ before, after }> }> }}
+   */
+  function findReplace(html, pairs, format = "text") {
+    if (!Array.isArray(pairs) || !pairs.length) throw new Error("replacements must be a list of { find, replace } pairs.");
+    const plainNow = htmlToPlain(html);
+    const text = format !== "html";
+    // HTML positions that are inside a <tag …>, where plain-text matches mustn't land
+    const inTag = (pos) => html.lastIndexOf("<", pos) > html.lastIndexOf(">", pos - 1);
+    const pattern = (find) => {
+      if (!text) return new RegExp(find.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g");
+      const piece = { "&": "(?:&amp;|&#38;)", "<": "(?:&lt;|&#60;)", ">": "(?:&gt;|&#62;)", '"': '(?:"|&quot;|&#34;)', "'": "(?:'|&#39;|&#x27;|&apos;)",
+        " ": "(?: |&nbsp;|&#160;|\u00a0)", "\u00a0": "(?: |&nbsp;|&#160;|\u00a0)" };
+      return new RegExp([...find].map((ch) => piece[ch] ?? ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(""), "g");
+    };
+    const found = pairs.map((p, i) => {
+      const find = String(p?.find ?? "");
+      if (!find) throw new Error(`Replacement ${i + 1} has an empty 'find'.`);
+      if (p?.replace === undefined || p?.replace === null) throw new Error(`Replacement ${i + 1} ('${find}') needs a 'replace' (use "" to remove the text).`);
+      const re = pattern(find);
+      const hits = [];
+      for (let m; (m = re.exec(html)); ) { if (!text || !inTag(m.index)) hits.push({ start: m.index, end: m.index + m[0].length }); if (!m[0].length) re.lastIndex++; }
+      return { i, find, replace: String(p.replace), all: p.all === true, hits };
+    });
+    const problems = [];
+    for (const f of found) {
+      if (f.hits.length === 1 || (f.all && f.hits.length > 1)) continue;
+      if (f.hits.length > 1) { problems.push(`'${f.find}' appears ${f.hits.length} times; include more of the surrounding text so it matches only once, or use replace all.`); continue; }
+      problems.push(text && plainNow.includes(f.find)
+        ? `'${f.find}' is in the note, but split by formatting (for example part of it is bold, a link or on another line), so it can't be replaced as plain text. Use a shorter piece, or format "html".`
+        : `'${f.find}' isn't in the note.`);
+    }
+    // every place that will change, in note order
+    const places = found.filter((f) => f.hits.length === 1 || (f.all && f.hits.length > 1))
+      .flatMap((f) => f.hits.map((h) => ({ f, start: h.start, end: h.end })))
+      .sort((x, y) => x.start - y.start);
+    for (let k = 1; k < places.length; k++) {
+      const p0 = places[k - 1], p1 = places[k];
+      if (p1.start < p0.end && !problems.some((m) => m.includes("overlap"))) {
+        problems.push(p0.f === p1.f ? `'${p0.f.find}' overlaps itself in the note.` : `'${p0.f.find}' and '${p1.f.find}' overlap in the note; combine them into one replacement.`);
+      }
+    }
+    if (problems.length) throw new Error("Nothing was changed. " + problems.join(" "));
+    // apply from the end so earlier positions stay valid; note where each lands in the new HTML
+    let out = html;
+    const pieceOf = (f) => (text ? esc(f.replace).replace(/\r?\n/g, "<br>") : f.replace);
+    for (const pl of [...places].reverse()) out = out.slice(0, pl.start) + pieceOf(pl.f) + out.slice(pl.end);
+    let shift = 0;
+    for (const pl of places) {
+      const len = pieceOf(pl.f).length;
+      pl.newStart = pl.start + shift; pl.newEnd = pl.newStart + len;
+      shift += len - (pl.end - pl.start);
+    }
+    // The changed text in «», with ~40 characters either side (widened so no tag is cut in half), as plain text.
+    const flat = (h) => {
+      const d = document.createElement("div");
+      d.innerHTML = h.replace(/<br\s*\/?>/gi, " ").replace(/<\/(p|h[1-6]|li|div|tr|ul|ol|table)>/gi, "</$1> ");
+      return (d.textContent || "").replace(/\s+/g, " ");
+    };
+    const ctx = (s, start, end) => {
+      let a = Math.max(0, start - 40), b = Math.min(s.length, end + 40);
+      const lt = s.lastIndexOf("<", a), gt = s.lastIndexOf(">", a);
+      if (lt > gt && lt < start) a = lt;
+      const lt2 = s.lastIndexOf("<", b), gt2 = s.lastIndexOf(">", b);
+      if (lt2 > gt2 && lt2 >= end) { const close = s.indexOf(">", lt2); b = close < 0 ? lt2 : close + 1; }
+      const left = flat(s.slice(a, start)).replace(/^\s+/, ""), right = flat(s.slice(end, b)).replace(/\s+$/, "");
+      return (a > 0 ? "…" : "") + left + "«" + flat(s.slice(start, end)) + "»" + right + (b < s.length ? "…" : "");
+    };
+    const results = found.map((f) => {
+      const mine = places.filter((pl) => pl.f === f).map((pl) => ({
+        before: ctx(html, pl.start, pl.end), after: ctx(out, pl.newStart, pl.newEnd),
+      }));
+      return { find: f.find, replace: f.replace, all: f.all, count: mine.length, places: mine, before: mine[0].before, after: mine[0].after };
+    });
+    return { html: text ? out : sanitize(out), results };
+  }
+
   // Plain-text copy (AboveVTT uses it for search): keep a line break between blocks and list items.
   const htmlToPlain = (html) => {
     const d = document.createElement("div");
@@ -247,16 +329,21 @@
     return { created: noteSummary(id) };
   });
 
-  M.register("update_note", async ({ noteId, noteTitle, newTitle, content, format, mode = "replace", visibility, folderId, folderTitle } = {}) => {
+  M.register("update_note", async ({ noteId, noteTitle, newTitle, content, format, mode = "replace", replacements, visibility, folderId, folderTitle, dryRun } = {}) => {
     M.requireDM();
     const id = findNote({ noteId, noteTitle });
     const n = J().notes[id];
     if (n.ddbsource && content !== undefined) throw new Error("This note comes from a D&D Beyond source book and can't be edited.");
-    if (newTitle === undefined && content === undefined && visibility === undefined && !folderId && !folderTitle) {
-      throw new Error("Nothing to change: pass newTitle, content, visibility and/or a folder to move it to.");
+    if (n.ddbsource && replacements !== undefined) throw new Error("This note comes from a D&D Beyond source book and can't be edited.");
+    if (newTitle === undefined && content === undefined && replacements === undefined && visibility === undefined && !folderId && !folderTitle) {
+      throw new Error("Nothing to change: pass newTitle, content, replacements, visibility and/or a folder to move it to.");
+    }
+    if (content !== undefined && replacements !== undefined) throw new Error("Pass either content or replacements, not both.");
+    if (dryRun && (replacements === undefined || content !== undefined || newTitle !== undefined || visibility !== undefined || folderId || folderTitle)) {
+      throw new Error("dryRun previews find-and-replace only: pass replacements and nothing else to change.");
     }
     // Check everything first.
-    if (content !== undefined) refuseIfOpenForEditing(id);
+    if (content !== undefined || replacements !== undefined) refuseIfOpenForEditing(id);
     const player = parseVisibility(visibility);
     const dest = folderId || folderTitle ? findChapter({ folderId, folderTitle }) : null;
     if (newTitle !== undefined && !String(newTitle).trim()) throw new Error("A note's title can't be empty.");
@@ -267,11 +354,25 @@
       html = mode === "append" ? (n.text || "") + piece : mode === "prepend" ? piece + (n.text || "") : piece;
       if (html.length > MAX_NOTE_CHARS) throw new Error(`The note would become ${html.length.toLocaleString()} characters; AboveVTT can only send about ${MAX_NOTE_CHARS.toLocaleString()}. Split it.`);
     }
+    let replaced;
+    if (replacements !== undefined) {
+      const r = findReplace(n.text || "", replacements, format);
+      if (r.html.length > MAX_NOTE_CHARS) throw new Error(`The note would become ${r.html.length.toLocaleString()} characters; AboveVTT can only send about ${MAX_NOTE_CHARS.toLocaleString()}. Split it.`);
+      replaced = r.results;
+      if (dryRun) {
+        return { dryRun: true, before: noteSummary(id), afterLength: htmlToPlain(r.html).length, wouldChange: r.html !== (n.text || ""), replaced };
+      }
+      if (r.html !== (n.text || "")) html = r.html;
+    }
 
     const before = noteSummary(id);
     const changed = [];
     if (newTitle !== undefined && String(newTitle).trim() !== n.title) { n.title = String(newTitle).trim(); changed.push("title"); }
-    if (html !== undefined) { n.text = html; n.plain = htmlToPlain(html); changed.push(mode === "replace" ? "content" : `content (${mode}ed)`); }
+    if (html !== undefined) {
+      n.text = html; n.plain = htmlToPlain(html);
+      const places = replaced ? replaced.reduce((t, x) => t + x.count, 0) : 0;
+      changed.push(replaced ? `content (${places} place${places === 1 ? "" : "s"} replaced)` : mode === "replace" ? "content" : `content (${mode}ed)`);
+    }
     let movedChapters = false;
     if (dest) {
       const from = chapterOf(id);
@@ -286,13 +387,13 @@
       J().note_visibility(id, player); // AboveVTT's own: sets, sends to players, saves
       changed.push("visibility");
     }
-    if (!changed.length) return { before, after: before, changed };
+    if (!changed.length) return { before, after: before, changed, ...(replaced ? { replaced } : {}) };
     J().persist();
     if (movedChapters) sendChapters();
     sendNoteIfPlayersSee(id);
     if (id in (window.TOKEN_OBJECTS || {})) { try { window.TOKEN_OBJECTS[id].place(); } catch { /* ignore */ } }
     redraw();
-    return { before, after: noteSummary(id), changed };
+    return { before, after: noteSummary(id), changed, ...(replaced ? { replaced } : {}) };
   });
 
   M.register("delete_note", async ({ noteId, noteTitle, dryRun } = {}) => {

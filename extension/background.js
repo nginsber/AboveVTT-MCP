@@ -1,7 +1,7 @@
 // Service worker: keeps a WebSocket to the local AboveVTT MCP server and routes
 // calls to the campaign tab(s) through relay.js. Methods starting with "ext_" are
 // handled here in the service worker itself (e.g. reading a map image for step 15).
-importScripts("grid_detect.js");
+importScripts("grid_detect.js", "badge.js");
 
 const EXT_VERSION = chrome.runtime.getManifest().version;
 const DEFAULT_PORT = 47321;
@@ -169,14 +169,24 @@ async function detectGridFromUrl({ url, minSquare, maxSquare }) {
 function sendToServer(msg) {
   if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
 }
-function sendTabs() { sendToServer({ type: "tabs", tabs: tabList() }); }
+function sendTabs() { sendToServer({ type: "tabs", tabs: tabList() }); updateBadge(); }
 
 function setState(state, error = "") {
   wsState = state;
   lastError = error;
-  const badge = { connected: ["ON", "#2e7d32"], connecting: ["…", "#f9a825"], "bad-token": ["KEY", "#c62828"] }[state] || ["OFF", "#757575"];
-  chrome.action.setBadgeText({ text: badge[0] });
-  chrome.action.setBadgeBackgroundColor({ color: badge[1] });
+  updateBadge();
+}
+
+/** Toolbar icon + tooltip from the server connection and the open campaign tabs (rules in badge.js). */
+let lastBadge = "";
+function updateBadge() {
+  const b = self.AVTT_badgeFor(wsState, tabList(), lastError);
+  const key = JSON.stringify(b);
+  if (key === lastBadge) return; // tabs report every few seconds; only touch the icon when it changes
+  lastBadge = key;
+  chrome.action.setIcon({ path: b.icon });
+  chrome.action.setBadgeText({ text: "" }); // the state is in the icon itself
+  chrome.action.setTitle({ title: b.title });
 }
 
 // ---------- options page / popup --------------------------------------------

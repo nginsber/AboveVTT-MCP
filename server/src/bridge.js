@@ -20,15 +20,68 @@ const log = (...args) => console.error("[abovevtt-mcp]", ...args);
 export const CONFIG_DIR = path.join(os.homedir(), ".abovevtt-mcp");
 export const TOKEN_FILE = path.join(CONFIG_DIR, "bridge-token.txt");
 
-export function loadOrCreateToken() {
-  if (process.env.AVTT_BRIDGE_TOKEN) return process.env.AVTT_BRIDGE_TOKEN.trim();
+// On macOS / Linux, keep the config folder (token, change log, fog backups) and the
+// token file readable by this user only. File modes don't apply on Windows, where the
+// user profile folder is already private.
+const POSIX = process.platform !== "win32";
+
+/** Create the config folder if needed and make it owner-only (0700). */
+export function ensureConfigDir() {
+  fs.mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
+  if (POSIX) tightenMode(CONFIG_DIR, 0o700);
+}
+
+/** Remove group/other access from an existing file or folder (fixes older installs). */
+function tightenMode(p, mode) {
+  try {
+    if ((fs.statSync(p).mode & 0o077) !== 0) fs.chmodSync(p, mode);
+  } catch (err) {
+    log(`could not restrict permissions on ${p}: ${err.message}`);
+  }
+}
+
+function readToken() {
   try {
     const existing = fs.readFileSync(TOKEN_FILE, "utf8").trim();
-    if (existing.length >= 16) return existing;
-  } catch { /* create below */ }
-  fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    return existing.length >= 16 ? existing : null;
+  } catch {
+    return null;
+  }
+}
+
+const sleepSync = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
+export function loadOrCreateToken() {
+  ensureConfigDir(); // also protects the change log and fog backups kept in the same folder
+  if (process.env.AVTT_BRIDGE_TOKEN) return process.env.AVTT_BRIDGE_TOKEN.trim();
+
+  const existing = readToken();
+  if (existing) {
+    if (POSIX) tightenMode(TOKEN_FILE, 0o600);
+    return existing;
+  }
+
+  // Create the file owner-only (0600). "wx" fails if it already exists, so when several
+  // copies of the server start at the same moment they all end up with the same token.
   const token = crypto.randomBytes(18).toString("base64url");
-  fs.writeFileSync(TOKEN_FILE, token + "\n", { encoding: "utf8" });
+  try {
+    fs.writeFileSync(TOKEN_FILE, token + "\n", { encoding: "utf8", mode: 0o600, flag: "wx" });
+    return token;
+  } catch (err) {
+    if (err.code !== "EEXIST") throw err;
+  }
+  // Another copy created it a moment ago: wait briefly for it to finish writing.
+  for (let i = 0; i < 20; i++) {
+    sleepSync(50);
+    const t = readToken();
+    if (t) {
+      if (POSIX) tightenMode(TOKEN_FILE, 0o600);
+      return t;
+    }
+  }
+  // The file exists but holds no usable token: replace it, as before.
+  fs.writeFileSync(TOKEN_FILE, token + "\n", { encoding: "utf8", mode: 0o600 });
+  if (POSIX) tightenMode(TOKEN_FILE, 0o600);
   return token;
 }
 

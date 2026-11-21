@@ -98,19 +98,21 @@ You don't need to run `npm install`. `server\dist\abovevtt-mcp.mjs` is already b
 
 6. Optional, for grid detection: on the same options page click **Allow reading map images** and accept Chrome's prompt. This lets the extension download a scene's map image to measure its grid. You can remove it again from the same page.
 
-The badge shows the connection state:
+The extension's toolbar icon is AboveVTT's red "A" with **MCP** written underneath. The colour of the letters shows whether everything is ready. Hover over it for details.
 
-| Badge | Meaning |
+| Icon | Meaning |
 |---|---|
-| **ON** (green) | Connected to the server. |
-| **OFF** | Can't reach the server. Is Claude desktop running? |
-| **KEY** | The token is wrong. Copy it again. |
+| **MCP** in green | Ready: connected to the server, and AboveVTT is running as DM in a campaign tab. |
+| **MCP** in orange | Connected to the server, but no AboveVTT DM tab: no campaign open, AboveVTT not started, or running as a player. |
+| **MCP** in yellow | Connecting to the server. |
+| **MCP** in grey | Can't reach the server. Is Claude desktop running? |
+| **MCP** in red | The token is wrong. Copy it again. |
 
 ## 5. Test
 
 1. Open your campaign on D&D Beyond **as the DM** and start AboveVTT.
 2. **Reload the tab once.** You only need to do this the first time after installing the extension.
-3. The extension's options page should list the tab as *AboveVTT running as DM*.
+3. The toolbar icon should show **MCP** in green, and the extension's options page should list the tab as *AboveVTT running as DM*.
 4. In Claude desktop, ask **"Check the AboveVTT status."** You should get something like *Ready: DM in "<campaign>", AboveVTT 1.61, scene "<scene>".*
 5. Try a read-only request first, such as **"List my scenes."**
 
@@ -123,8 +125,9 @@ See [README.md](README.md) for everything it can do.
 | Symptom | Fix |
 |---|---|
 | Claude has no AboveVTT tools | Check the JSON: commas, double backslashes, correct paths. Then fully quit and restart Claude desktop. **Settings → Desktop app → Extensions → Local MCP servers** shows the server's state and log. |
-| Badge OFF | Claude desktop must be running. Then click **Save and connect** again. |
-| Badge KEY | Copy the token again from `bridge-token.txt`. |
+| Icon shows MCP in grey | Claude desktop must be running. Then click **Save and connect** again. |
+| Icon shows MCP in red | Copy the token again from `bridge-token.txt`. |
+| Icon shows MCP in orange | Open the campaign as DM and start AboveVTT. If it's already open, reload the tab. The tooltip says which it is. |
 | "no campaign tab is open" | Reload the D&D Beyond campaign tab. |
 | "not running as the DM" | Open the campaign from the DM side and start AboveVTT. |
 | "could not open port 47321" | Another program is using that port. Add `"env": { "AVTT_BRIDGE_PORT": "47400" }` to the `abovevtt` entry, and set the same port on the extension's options page. |
