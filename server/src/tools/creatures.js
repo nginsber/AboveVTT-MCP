@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { errorResult } from "../util.js";
 import { logChange } from "../changelog.js";
+import { guardedCall, previewFooter, confirmTokenField, CONFIRM_STEP } from "../confirm.js";
 
 const tab = { tabId: z.number().int().optional().describe("Only needed if several AboveVTT tabs are open.") };
 const which = {
@@ -45,7 +46,7 @@ const tokenBits = {
   statBlockText: z.string().optional().describe("Or: a stat block as plain text (e.g. pasted). Must contain 'Armor Class N' and 'Hit Points N (XdY+Z)' for AboveVTT to pick up AC/HP."),
   statBlockHtml: z.string().optional().describe("Or: a stat block as HTML."),
 };
-const ASK_FIRST = "PERMANENT. Call it with dryRun: true first, tell the user exactly what will be deleted, and wait for their explicit yes in chat. Never delete on your own initiative. ";
+const ASK_FIRST = "PERMANENT. Call it with dryRun: true first, tell the user exactly what will be deleted, and wait for their explicit yes in chat. " + CONFIRM_STEP + "Never delete on your own initiative. ";
 const ok = (text) => ({ content: [{ type: "text", text }] });
 
 function stats(c) {
@@ -154,16 +155,16 @@ export function register(server, bridge) {
   server.registerTool("delete_creature", {
     title: "Delete a custom creature",
     description: ASK_FIRST + "Deletes a custom creature from My Tokens with AboveVTT's own delete, which also deletes its stat block. Tokens already placed on maps stay.",
-    inputSchema: { ...which, dryRun: z.boolean().optional(), ...tab },
+    inputSchema: { ...which, dryRun: z.boolean().optional(), confirmToken: confirmTokenField, ...tab },
     annotations: { destructiveHint: true },
   }, async ({ tabId, ...p }) => {
     try {
-      const r = await call("delete_creature", p, tabId);
+      const r = await guardedCall(bridge, "delete_creature", p, { tabId });
       const c = r.dryRun ? r.wouldDelete : r.deleted;
       const text = `${r.dryRun ? "Would delete (nothing changed yet)" : "Deleted"}: ${creatureLine(c).trim()} from ${c.path.split(" / ").slice(0, -1).join(" / ")}` +
         ((r.dryRun ? r.alsoDeletesStatBlock : r.statBlockDeleted) ? ", including its stat block." : ".") + " Tokens already on maps are not affected.";
       if (!r.dryRun) log("delete_creature", p, text);
-      return ok(text);
+      return ok(text + previewFooter(r));
     } catch (e) { return errorResult(e.message); }
   });
 
@@ -183,11 +184,11 @@ export function register(server, bridge) {
   server.registerTool("delete_creature_folder", {
     title: "Delete a My Tokens folder",
     description: ASK_FIRST + "Deletes a My Tokens folder. mode 'moveContentsUp' (default) moves its contents up one level first; 'deleteEverything' also deletes every creature (and stat block) and subfolder inside — AboveVTT's two folder delete options.",
-    inputSchema: { ...folder, mode: z.enum(["moveContentsUp", "deleteEverything"]).optional(), dryRun: z.boolean().optional(), ...tab },
+    inputSchema: { ...folder, mode: z.enum(["moveContentsUp", "deleteEverything"]).optional(), dryRun: z.boolean().optional(), confirmToken: confirmTokenField, ...tab },
     annotations: { destructiveHint: true },
   }, async ({ tabId, ...p }) => {
     try {
-      const r = await call("delete_creature_folder", p, tabId);
+      const r = await guardedCall(bridge, "delete_creature_folder", p, { tabId });
       const lines = [`${r.dryRun ? "Would delete (nothing changed yet)" : "Deleted"} folder ${r.folder}`];
       if (r.mode === "deleteEverything") {
         lines.push(r.deletes.length ? `${r.dryRun ? "Would also delete" : "Also deleted"} (${r.deletes.length}):` : "It was empty.");
@@ -198,7 +199,7 @@ export function register(server, bridge) {
       }
       const text = lines.join("\n");
       if (!r.dryRun) log("delete_creature_folder", p, text);
-      return ok(text);
+      return ok(text + previewFooter(r));
     } catch (e) { return errorResult(e.message); }
   });
 }

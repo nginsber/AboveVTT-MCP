@@ -283,7 +283,7 @@
     return { group, changed, notes };
   });
 
-  M.register("reset_setting", async ({ group, keys, all } = {}) => {
+  M.register("reset_setting", async ({ group, keys, all, dryRun } = {}) => {
     M.requireDM();
     if (!GROUPS.includes(group)) throw new Error(`group must be one of: ${GROUPS.join(", ")}.`);
     if (!all && (!Array.isArray(keys) || keys.length === 0)) throw new Error("Pass keys to reset, or all: true.");
@@ -300,9 +300,10 @@
       });
       for (const d of targets) {
         const before = get_avtt_setting_value(d.name);
+        if (JSON.stringify(before) !== JSON.stringify(d.defaultValue)) reset.push({ key: d.name, from: before, to: d.defaultValue });
+        if (dryRun) continue;
         set_avtt_setting_value(d.name, d.defaultValue);
         if (d.name === "quickToggleDefaults") window.defaultToggles = d.defaultValue;
-        if (JSON.stringify(before) !== JSON.stringify(d.defaultValue)) reset.push({ key: d.name, from: before, to: d.defaultValue });
       }
     } else {
       const store = group === "tokenDefaults" ? window.TOKEN_SETTINGS : window.SCENE_DEFAULT_SETTINGS;
@@ -316,18 +317,25 @@
           const s = colorKeys.get(k);
           const def = s === "light1" ? d0.light1?.color : d0.light2?.color;
           const before = store[s]?.color;
+          if (before !== def) reset.push({ key: k, from: before, to: def });
+          if (dryRun) continue;
           // Keep the object (AboveVTT's flyout reads TOKEN_SETTINGS.vision.color etc. directly).
           store[s] ??= {};
           store[s].color = def;
-          if (before !== def) reset.push({ key: k, from: before, to: def });
           continue;
         }
         if (!defs.has(k)) throw new Error(`'${k}' is not a ${group} setting.`);
-        if (store[k] !== undefined) { reset.push({ key: k, from: store[k], to: defs.get(k).defaultValue }); delete store[k]; }
+        if (store[k] !== undefined) {
+          reset.push({ key: k, from: store[k], to: defs.get(k).defaultValue });
+          if (!dryRun) delete store[k];
+        }
       }
-      if (group === "tokenDefaults") persist_token_settings(window.TOKEN_SETTINGS);
-      else persist_default_scene_settings(window.SCENE_DEFAULT_SETTINGS);
+      if (!dryRun) {
+        if (group === "tokenDefaults") persist_token_settings(window.TOKEN_SETTINGS);
+        else persist_default_scene_settings(window.SCENE_DEFAULT_SETTINGS);
+      }
     }
+    if (dryRun) return { group, reset, dryRun: true };
     if (reset.length) refreshSettingsPanel();
     return { group, reset };
   });

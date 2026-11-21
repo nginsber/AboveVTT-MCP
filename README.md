@@ -21,6 +21,17 @@ You need to be the **DM**, with the campaign open in Chrome and AboveVTT running
 
 ### Checking the connection
 - **`status`**: is the extension connected, is AboveVTT running, are you the DM, which campaign and scene, which AboveVTT version.
+- **The toolbar icon** shows the same at a glance: AboveVTT's red "A" with **MCP** underneath, and the colour of the letters tells you the state. Hover over it for details, such as which campaign is open, or why it isn't ready.
+
+| MCP colour | Meaning |
+|---|---|
+| Green | Ready: connected to the MCP server (Claude desktop), and AboveVTT is running as DM in a campaign tab. |
+| Orange | Connected to the server, but no AboveVTT DM tab: no campaign open, AboveVTT not started yet, or running as a player. |
+| Yellow | Connecting to the server. |
+| Grey | Can't reach the server. Is Claude desktop running? |
+| Red | The server rejected the token. Copy it again from `bridge-token.txt` into the extension's options page. |
+
+The icon changes within a few seconds of opening or closing a campaign tab, starting AboveVTT, or Claude desktop starting or stopping. The extensions page and Chrome's menus show the plain AboveVTT icon.
 
 ### Scenes
 - **`list_scenes`**: the scene tree with folders, and which scene you and the players are on.
@@ -46,7 +57,7 @@ You need to be the **DM**, with the campaign open in Chrome and AboveVTT running
 
 ### Journal notes
 - **`list_notes` / `get_note`**: browse and read the journal.
-- **`create_note` / `update_note` / `delete_note`**: write notes in plain text. Use `# heading`, `- bullet` and `**bold**` for formatting. You can replace, add to the end or add to the start, and share a note with all players or with named players.
+- **`create_note` / `update_note` / `delete_note`**: write notes in plain text. Use `# heading`, `- bullet` and `**bold**` for formatting. You can replace, add to the end or add to the start, and share a note with all players or with named players. For small fixes in a long note, `update_note` can **find and replace**, for example *"In Session 3, change Nov 3 to Nov 10 and 45 HP to 52 HP."* Each piece of text must appear exactly once, and if any doesn't, nothing changes. Say **"Replace all"** (for example *"Replace all Goblin with Kobold in Session 3"*) to change every place a piece of text appears: Claude first shows a preview of each place, original → change, and only saves after your yes.
 - **`create_note_folder` / `update_note_folder` / `delete_note_folder`**: journal folders.
 
 ### Custom creatures (My Tokens)
@@ -86,7 +97,7 @@ You need to be the **DM**, with the campaign open in Chrome and AboveVTT running
 
 ## Safety
 
-- **Claude asks before anything permanent.** Deletes and imports are previewed first (`dryRun`), and Claude has to wait for your "yes" in chat. AboveVTT's own pop-up confirmations are not used, because they would freeze the connection.
+- **Claude asks before anything permanent.** Deletes, imports, resets and the Settings buttons that change data are previewed first (`dryRun`), and Claude has to wait for your "yes" in chat. The server enforces the preview: the real change needs the single-use `confirmToken` from a preview of exactly the same request (valid 10 minutes), and it is refused if what would change is no longer the same as in the preview. AboveVTT's own pop-up confirmations are not used, because they would freeze the connection.
 - **No live-session control.** The connector doesn't switch the players' scene, place tokens on the map, or play, pause or change the volume of music. Those stay with you. It won't edit the playlist that's loaded in the mixer while music is playing. The one exception is `set_fog`: if players are on that scene, they see the fog change at once. By your choice it runs without asking first; the old fog is always saved so it can be restored.
 - **Everything is checked before saving.** Unknown setting names, bad colours, links that aren't http(s), duplicate names and similar mistakes are caught before anything is changed.
 - **Change log.** Every change is added to `%USERPROFILE%\.abovevtt-mcp\change-log.jsonl`. Ask Claude *"show the change log"*.
@@ -106,11 +117,17 @@ You need to be the **DM**, with the campaign open in Chrome and AboveVTT running
 
 ```
 extension/   Chrome extension (manifest v3). page.js + one file per feature run inside the campaign tab.
+             background.js keeps the connection to the server; badge.js decides the toolbar icon; icons/ holds the icons.
 server/      MCP server. src/ is the source, dist/abovevtt-mcp.mjs the bundled file Claude desktop runs.
 test/        jsdom tests that load the real AboveVTT source from a sibling ../AboveVTT folder.
+tools/       make_status_icons.py rebuilds the toolbar icons (needs Python and Pillow).
 ROADMAP.md   Build history, design decisions and test results for each step.
 ```
 
 ## Not affiliated
 
 This is an independent fan project. It is not made by or affiliated with AboveVTT, D&D Beyond, Wizards of the Coast, or Anthropic.
+
+### Icon credit
+
+The extension's icon is [AboveVTT](https://github.com/cyruzzo/AboveVTT)'s icon, © 2021 Daniele "cyruzzo" Martini and AboveVTT contributors, used under AboveVTT's license, the [GNU Affero General Public License v3.0](https://www.gnu.org/licenses/agpl-3.0.html) (AGPL-3.0). `extension/icons/icon16–128.png` are the original, resized. The toolbar icons in `extension/icons/status/` are modified versions: the red "A" is made smaller and "MCP" is added underneath in a colour per state, by `tools/make_status_icons.py`. These icon files remain under AGPL-3.0. Using the icon doesn't mean this project is made or endorsed by AboveVTT. Details: [extension/icons/NOTICE.md](extension/icons/NOTICE.md).

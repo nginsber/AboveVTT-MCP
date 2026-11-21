@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { errorResult } from "../util.js";
 import { logChange } from "../changelog.js";
+import { guardedCall, previewFooter, confirmTokenField, CONFIRM_STEP } from "../confirm.js";
 
 const tab = { tabId: z.number().int().optional().describe("Only needed if several AboveVTT tabs are open.") };
 const trackWhich = {
@@ -12,7 +13,7 @@ const plWhich = {
   playlistName: z.string().optional().describe("Or: the playlist's exact name."),
 };
 const tags = z.union([z.array(z.string()), z.string()]);
-const ASK_FIRST = "PERMANENT. Call it with dryRun: true first, tell the user exactly what will be deleted, and wait for their explicit yes in chat. Never delete on your own initiative. ";
+const ASK_FIRST = "PERMANENT. Call it with dryRun: true first, tell the user exactly what will be deleted, and wait for their explicit yes in chat. " + CONFIRM_STEP + "Never delete on your own initiative. ";
 const ok = (text) => ({ content: [{ type: "text", text }] });
 const trackLine = (t) => `• ${t.name} [${t.id}]${t.tags?.length ? ` — tags: ${t.tags.join(", ")}` : ""}\n    ${t.src}`;
 function playlistText(p) {
@@ -76,15 +77,15 @@ export function register(server, bridge) {
   server.registerTool("delete_tracks", {
     title: "Delete tracks from the music library",
     description: ASK_FIRST + "Deletes tracks from the track library by id, name, or every track with a tag. Copies already in playlists stay there.",
-    inputSchema: { trackIds: z.array(z.string()).optional(), trackNames: z.array(z.string()).optional(), tag: z.string().optional(), dryRun: z.boolean().optional(), ...tab },
+    inputSchema: { trackIds: z.array(z.string()).optional(), trackNames: z.array(z.string()).optional(), tag: z.string().optional(), dryRun: z.boolean().optional(), confirmToken: confirmTokenField, ...tab },
     annotations: { destructiveHint: true },
   }, async ({ tabId, ...p }) => {
     try {
-      const r = await call("delete_tracks", p, tabId);
+      const r = await guardedCall(bridge, "delete_tracks", p, { tabId });
       const list = r.dryRun ? r.wouldDelete : r.deleted;
       const text = [`${r.dryRun ? "Would delete (nothing changed yet)" : "Deleted"} ${list.length} track(s):`, ...list.map(trackLine)].join("\n");
       if (!r.dryRun) await log("delete_tracks", p, text.split("\n")[0] + " " + list.map((t) => t.name).join(", "));
-      return ok(text);
+      return ok(text + previewFooter(r));
     } catch (e) { return errorResult(e.message); }
   });
 
@@ -131,14 +132,14 @@ export function register(server, bridge) {
   server.registerTool("delete_playlist", {
     title: "Delete a mixer playlist",
     description: ASK_FIRST + "Deletes a playlist (not the tracks in the library). The playlist loaded in the mixer can't be deleted here.",
-    inputSchema: { ...plWhich, dryRun: z.boolean().optional(), ...tab },
+    inputSchema: { ...plWhich, dryRun: z.boolean().optional(), confirmToken: confirmTokenField, ...tab },
     annotations: { destructiveHint: true },
   }, async ({ tabId, ...p }) => {
     try {
-      const r = await call("delete_playlist", p, tabId);
+      const r = await guardedCall(bridge, "delete_playlist", p, { tabId });
       const text = `${r.dryRun ? "Would delete (nothing changed yet)" : "Deleted"} playlist:\n${playlistText(r.dryRun ? r.wouldDelete : r.deleted)}`;
       if (!r.dryRun) await log("delete_playlist", p, text.split("\n")[1]);
-      return ok(text);
+      return ok(text + previewFooter(r));
     } catch (e) { return errorResult(e.message); }
   });
 }

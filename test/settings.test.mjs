@@ -41,8 +41,23 @@ console.log("  scene store:", w.localStorage.getItem("SceneDefaults-8258198"));
 show("scene range bad", await call("set_setting", { group: "sceneDefaults", changes: { grid_line_width: 99 } }));
 show("no-op", await call("set_setting", { group: "sceneDefaults", changes: { grid: true } }));
 show("changedOnly", await call("list_settings", { changedOnly: true }));
-show("reset some", await call("reset_setting", { group: "tokenDefaults", keys: ["revealname", "visionColor"] }));
-show("reset scene all", await call("reset_setting", { group: "sceneDefaults", all: true }));
-show("reset aboveVTT all", await call("reset_setting", { group: "aboveVTT", all: true }));
+// dryRun previews must change nothing and list exactly what the real reset then changes.
+let previewFails = 0;
+const snapshot = () => JSON.stringify({ ls: { ...w.localStorage }, t: w.TOKEN_SETTINGS, s: w.SCENE_DEFAULT_SETTINGS, b: w.document.body.className });
+for (const [label, p] of [
+  ["reset some", { group: "tokenDefaults", keys: ["revealname", "visionColor"] }],
+  ["reset scene all", { group: "sceneDefaults", all: true }],
+  ["reset aboveVTT all", { group: "aboveVTT", all: true }],
+]) {
+  const before = snapshot();
+  const preview = await call("reset_setting", { ...p, dryRun: true });
+  const unchanged = snapshot() === before;
+  const real = await call("reset_setting", p);
+  const same = JSON.stringify(preview.result?.reset) === JSON.stringify(real.result?.reset);
+  const good = unchanged && preview.result?.dryRun === true && same && real.result?.reset.length > 0;
+  console.log(`${good ? "ok  " : "FAIL"} ${label} preview: changed nothing=${unchanged}, lists the same ${preview.result?.reset?.length} change(s) as the real reset=${same}`);
+  if (!good) previewFails++;
+  show(label, real);
+}
 console.log("  body classes after reset:", w.document.body.className);
-process.exit(0);
+process.exit(previewFails ? 1 : 0);
