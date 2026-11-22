@@ -9,10 +9,13 @@ const DEFAULT_PORT = 47321;
 /** tabId -> { port, info, updatedAt } */
 const tabs = new Map();
 let ws = null;
-let wsState = "disconnected"; // disconnected | connecting | connected | bad-token
+let wsState = "disconnected"; // disconnected | connecting | connected | bad-token | other-browser
 let lastError = "";
 let reconnectTimer = null;
 let retryDelay = 1000;
+/** set when the server turned this browser away because another one is connected: { other, otherHasDMTab } */
+let otherBrowser = null;
+const OTHER_BROWSER_RETRY_MS = 30000;
 /** server call id -> tabId */
 const inFlight = new Map();
 
@@ -32,6 +35,7 @@ chrome.runtime.onConnect.addListener((port) => {
       sendToServer(msg);
     }
   });
+  sendIdentity(port);
   port.onDisconnect.addListener(() => {
     tabs.delete(tabId);
     for (const [id, t] of inFlight) {
@@ -46,6 +50,16 @@ chrome.runtime.onConnect.addListener((port) => {
   ensureConnected();
 });
 
+/** Tell a tab (or all) which browser this is, for presence messages between DM tabs (review item 3b). */
+async function sendIdentity(port) {
+  const { browserId, browserName } = await settings();
+  const msg = { type: "identity", browserId, browserName };
+  for (const p of port ? [port] : [...tabs.values()].map((t) => t.port)) { try { p.postMessage(msg); } catch { /* tab gone */ } }
+}
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.browserName) sendIdentity();
+});
+
 function tabList() {
   return [...tabs.entries()].map(([tabId, t]) => ({ tabId, ...t.info, updatedAt: t.updatedAt }));
 }
@@ -56,18 +70,24 @@ function pickTab(requested) {
   const list = tabList().sort((a, b) => score(b) - score(a) || b.updatedAt - a.updatedAt);
   return list[0]?.tabId ?? null;
 }
-const score = (t) => (t.aboveVttRunning ? 2 : 0) + (t.isDM ? 1 : 0);
+// Prefer the active DM tab; a paused one (another DM tab is active, review item 3b) only gets a call when it's the only DM tab.
+const score = (t) => (t.aboveVttRunning ? 2 : 0) + (t.isDM ? 1 : 0) + (t.dmRole === "active" ? 1 : 0) - (t.dmRole === "paused" ? 2 : 0);
 
 // ---------- server connection ----------------------------------------------
 async function settings() {
-  const s = await chrome.storage.local.get({ port: DEFAULT_PORT, token: "" });
-  return { port: Number(s.port) || DEFAULT_PORT, token: String(s.token || "").trim() };
+  const s = await chrome.storage.local.get({ port: DEFAULT_PORT, token: "", browserId: "", browserName: "" });
+  let browserId = String(s.browserId || "");
+  if (!browserId) { // made once per browser profile; tells the server and other DM tabs which browser this is
+    browserId = crypto.randomUUID();
+    await chrome.storage.local.set({ browserId });
+  }
+  return { port: Number(s.port) || DEFAULT_PORT, token: String(s.token || "").trim(), browserId, browserName: String(s.browserName || "").trim() };
 }
 
 async function ensureConnected() {
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
   clearTimeout(reconnectTimer);
-  const { port, token } = await settings();
+  const { port, token, browserId, browserName } = await settings();
   if (!token) { setState("disconnected", "No token set. Open the extension's options page."); return; }
 
   setState("connecting");
@@ -82,19 +102,28 @@ async function ensureConnected() {
   ws = socket;
 
   socket.onopen = () => {
-    socket.send(JSON.stringify({ type: "hello", token, extVersion: EXT_VERSION, tabs: tabList() }));
+    socket.send(JSON.stringify({ type: "hello", token, extVersion: EXT_VERSION, browserId, browserName, tabs: tabList() }));
   };
   socket.onmessage = (event) => {
     let msg;
     try { msg = JSON.parse(event.data); } catch { return; }
-    if (msg.type === "welcome") { retryDelay = 1000; setState("connected"); sendTabs(); return; }
+    if (msg.type === "welcome") { retryDelay = 1000; otherBrowser = null; setState("connected"); sendTabs(); return; }
     if (msg.type === "ping") return; // keeps this worker alive
     if (msg.type === "call") routeCall(msg);
   };
   socket.onclose = (event) => {
     if (ws === socket) ws = null;
     if (event.code === 4001) setState("bad-token", "The server rejected the token. Copy it again from bridge-token.txt.");
-    else setState("disconnected", event.reason || "Server not running (is Claude desktop open?)");
+    else if (event.code === 4002) {
+      // Another browser is connected to the server (review item 3a). Wait calmly instead of pushing it off;
+      // the server switches to this browser if it gets the AboveVTT DM tab and the other one doesn't.
+      let other = {};
+      try { other = JSON.parse(event.reason || "{}"); } catch { /* old server */ }
+      otherBrowser = other;
+      setState("other-browser", "");
+      scheduleReconnect(OTHER_BROWSER_RETRY_MS);
+      return;
+    } else setState("disconnected", event.reason || "Server not running (is Claude desktop open?)");
     scheduleReconnect(event.code === 4001 ? 30000 : undefined);
   };
   socket.onerror = () => { /* onclose follows */ };
@@ -169,7 +198,15 @@ async function detectGridFromUrl({ url, minSquare, maxSquare }) {
 function sendToServer(msg) {
   if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
 }
-function sendTabs() { sendToServer({ type: "tabs", tabs: tabList() }); updateBadge(); }
+function sendTabs() {
+  sendToServer({ type: "tabs", tabs: tabList() });
+  updateBadge();
+  // Turned away because another browser is connected, and now this one has the AboveVTT DM tab: ask again now.
+  if (wsState === "other-browser" && tabList().some((t) => t.aboveVttRunning && t.isDM && t.dmRole !== "paused")) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(ensureConnected, 500);
+  }
+}
 
 function setState(state, error = "") {
   wsState = state;
@@ -180,7 +217,7 @@ function setState(state, error = "") {
 /** Toolbar icon + tooltip from the server connection and the open campaign tabs (rules in badge.js). */
 let lastBadge = "";
 function updateBadge() {
-  const b = self.AVTT_badgeFor(wsState, tabList(), lastError);
+  const b = self.AVTT_badgeFor(wsState, tabList(), lastError, otherBrowser);
   const key = JSON.stringify(b);
   if (key === lastBadge) return; // tabs report every few seconds; only touch the icon when it changes
   lastBadge = key;
@@ -192,7 +229,7 @@ function updateBadge() {
 // ---------- options page / popup --------------------------------------------
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === "getState") {
-    sendResponse({ state: wsState, error: lastError, tabs: tabList(), extVersion: EXT_VERSION });
+    sendResponse({ state: wsState, error: lastError, tabs: tabList(), extVersion: EXT_VERSION, title: self.AVTT_badgeFor(wsState, tabList(), lastError, otherBrowser).title });
   } else if (msg?.type === "imageAccess") {
     chrome.permissions.contains({ origins: IMAGE_ORIGINS }).then((has) => sendResponse({ has }));
     return true;

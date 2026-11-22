@@ -16,6 +16,9 @@ import os from "node:os";
 import path from "node:path";
 
 const log = (...args) => console.error("[abovevtt-mcp]", ...args);
+const KEEPALIVE_MS = Number(process.env.AVTT_KEEPALIVE_MS) || 20000; // shorter only in tests
+/** Does this tab list include a campaign tab running AboveVTT as DM (and not paused behind another DM tab)? */
+const hasDMTab = (tabs) => Array.isArray(tabs) && tabs.some((t) => t && t.aboveVttRunning && t.isDM && t.dmRole !== "paused");
 
 export const CONFIG_DIR = path.join(os.homedir(), ".abovevtt-mcp");
 export const TOKEN_FILE = path.join(CONFIG_DIR, "bridge-token.txt");
@@ -96,8 +99,9 @@ export class Bridge {
     this.role = "starting";      // starting | primary | peer
 
     // shared view of the extension (owned directly when primary, mirrored when peer)
-    this.extensionInfo = null;   // { extVersion, connectedAt }
+    this.extensionInfo = null;   // { extVersion, connectedAt, browserId, browserName }
     this.tabs = [];              // latest tab list reported by the extension
+    this.turnedAway = null;      // the last browser refused because another one is connected (review item 3a)
     this.pending = new Map();    // id -> { resolve, reject, timer }
     this.nextId = 1;
 
@@ -123,8 +127,11 @@ export class Bridge {
     this.#listen();
     // Keep the extension's service worker awake and detect dead connections.
     this.keepAlive = setInterval(() => {
-      if (this.socket?.readyState === 1) this.socket.send(JSON.stringify({ type: "ping", t: Date.now() }));
-    }, 20000);
+      if (this.socket?.readyState === 1) {
+        this.socket.send(JSON.stringify({ type: "ping", t: Date.now() }));
+        try { this.socket.ping(); } catch { /* closing */ } // the browser answers with a pong; see #isAlive
+      }
+    }, KEEPALIVE_MS);
   }
 
   stop() {
@@ -194,12 +201,39 @@ export class Bridge {
       if (!kind) {
         const tokenOk = typeof msg.token === "string" && safeEqual(msg.token, this.token);
         if (fromExtension && msg.type === "hello" && tokenOk) {
-          kind = "extension";
           clearTimeout(authTimer);
-          if (this.socket && this.socket !== ws) this.socket.close(4000, "replaced by newer connection");
+          const newcomer = {
+            browserId: typeof msg.browserId === "string" ? msg.browserId : null,
+            browserName: typeof msg.browserName === "string" ? msg.browserName.slice(0, 40) : "",
+            tabs: Array.isArray(msg.tabs) ? msg.tabs : [],
+          };
+          // Only one browser can be connected. Before, each new one pushed the other off and they kept
+          // taking turns. Now: keep the connected browser while it's alive, unless the newcomer has an
+          // AboveVTT DM tab and it hasn't (or it's the same browser reconnecting).
+          const decision = this.#chooseBrowser(newcomer);
+          if (decision === "refuse") {
+            const cur = this.extensionInfo || {};
+            this.turnedAway = { browserId: newcomer.browserId, browserName: newcomer.browserName, hasDMTab: hasDMTab(newcomer.tabs), at: new Date().toISOString() };
+            ws.close(4002, JSON.stringify({ other: cur.browserName || "", otherHasDMTab: hasDMTab(this.tabs) }).slice(0, 120));
+            log(`refused a second browser (${newcomer.browserName || "unnamed"}); keeping ${cur.browserName || "the connected one"}`);
+            this.#broadcastState();
+            return;
+          }
+          kind = "extension";
+          if (this.socket && this.socket !== ws) {
+            const why = decision === "same-browser" ? "same browser reconnected" : decision === "has-dm-tab" ? "replaced by a browser with an AboveVTT DM tab" : "replaced (the old connection stopped answering)";
+            this.socket.close(4000, why);
+            if (decision === "has-dm-tab") {
+              const old = this.extensionInfo || {};
+              this.turnedAway = { browserId: old.browserId ?? null, browserName: old.browserName || "", hasDMTab: false, at: new Date().toISOString() };
+            }
+          }
+          if (this.turnedAway && this.turnedAway.browserId && this.turnedAway.browserId === newcomer.browserId) this.turnedAway = null;
           this.socket = ws;
-          this.extensionInfo = { extVersion: msg.extVersion, connectedAt: new Date().toISOString() };
-          this.tabs = Array.isArray(msg.tabs) ? msg.tabs : [];
+          ws.lastSeen = Date.now();
+          ws.on("pong", () => { ws.lastSeen = Date.now(); });
+          this.extensionInfo = { extVersion: msg.extVersion, connectedAt: new Date().toISOString(), browserId: newcomer.browserId, browserName: newcomer.browserName };
+          this.tabs = newcomer.tabs;
           ws.send(JSON.stringify({ type: "welcome" }));
           log(`extension connected (v${msg.extVersion})`);
           this.#broadcastState();
@@ -222,6 +256,7 @@ export class Bridge {
       }
 
       // extension
+      ws.lastSeen = Date.now();
       if (msg.type === "tabs") {
         this.tabs = Array.isArray(msg.tabs) ? msg.tabs : [];
         this.#broadcastState();
@@ -253,6 +288,21 @@ export class Bridge {
       .catch((err) => reply({ ok: false, error: err.message }));
   }
 
+  /** Is the connected browser still answering? (pongs or messages within the last ~2 keepalives) */
+  #isAlive(ws) {
+    return !!ws && ws.readyState === 1 && Date.now() - (ws.lastSeen || 0) < 2.25 * KEEPALIVE_MS; // 45 s normally
+  }
+
+  /** A browser wants to connect while one may already be: "accept" | "same-browser" | "has-dm-tab" | "stale" | "refuse". */
+  #chooseBrowser(newcomer) {
+    const cur = this.socket;
+    if (!cur || cur.readyState !== 1) return "accept";
+    if (newcomer.browserId && newcomer.browserId === this.extensionInfo?.browserId) return "same-browser";
+    if (!this.#isAlive(cur)) return "stale";
+    if (hasDMTab(newcomer.tabs) && !hasDMTab(this.tabs)) return "has-dm-tab";
+    return "refuse";
+  }
+
   #selfInfo() { return { pid: this.pid, version: this.version, startedAt: this.startedAt }; }
 
   #state() {
@@ -260,6 +310,7 @@ export class Bridge {
     return {
       extension: connected ? { connected: true, ...this.extensionInfo } : { connected: false },
       tabs: this.tabs,
+      turnedAway: this.turnedAway,
     };
   }
 
@@ -331,6 +382,7 @@ export class Bridge {
     this.extensionInfo = this.remoteExtensionConnected ? { ...state.extension } : null;
     if (this.extensionInfo) delete this.extensionInfo.connected;
     this.tabs = Array.isArray(state?.tabs) ? state.tabs : [];
+    this.turnedAway = state?.turnedAway ?? null;
   }
 
   // ---------- calls ------------------------------------------------------------

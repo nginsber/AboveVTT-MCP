@@ -23,6 +23,9 @@
   <label for="port">Port</label>
   <input id="port" type="number" min="1024" max="65535">
   <div class="hint">Leave at 47321 unless you changed AVTT_BRIDGE_PORT.</div>
+  <label for="browserName">Name for this browser (optional)</label>
+  <input id="browserName" type="text" maxlength="40" placeholder="e.g. Desktop or Laptop">
+  <div class="hint">Shown in Claude's status and the icon's tooltip when AboveVTT is open as DM in more than one browser or on another PC.</div>
   <button id="save">Save and connect</button>
   <div id="state">Checking…</div>
   <h2 style="font-size:16px;margin-top:28px">Reading map images</h2>
