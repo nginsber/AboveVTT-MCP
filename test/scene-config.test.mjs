@@ -32,7 +32,7 @@ w.eval(fs.readFileSync(A+"ScenesPanel.js","utf8"));
 w.eval("did_update_scenes = async function(){ window.didUpdate++ }");
 for (const f of ["page.js","scenes.js","scene_config.js"]) w.eval(fs.readFileSync(X+f,"utf8"));
 const out={}; w.addEventListener("message", e => { if (e.data?.payload?.type==="result") out[e.data.payload.id]=e.data.payload; });
-let id=0; const call=async(method,params)=>{ const my=++id; w.dispatchEvent(new w.MessageEvent("message",{data:{channel:"avtt-mcp:ext",payload:{type:"call",id:my,method,params}},source:w})); for(let t=0;t<100&&!out[my];t++) await new Promise(r=>setTimeout(r,20)); return out[my]; };
+let id=0; const call = (method, params) => w.__avttMcpRun(method, params); // the locked entry point background.js uses
 const g = await call("get_scene_config",{});
 console.log("GET ok:", g.ok, g.error||""); if(g.ok){ for(const f of g.result.fields) console.log("  ",f.key,"=",JSON.stringify(f.valueLabel??f.value), f.choices? "choices:"+f.choices.map(c=>c.label).join("|"):"", f.min!==undefined?`[${f.min}-${f.max}]`:""); console.log("  extras:", JSON.stringify(g.result.extras)); }
 console.log("dialog left open?", w.$("#edit_scene_form").length, "hide css left?", w.$("#avtt-mcp-hide-scene-dialog").length);

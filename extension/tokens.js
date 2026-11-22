@@ -33,8 +33,8 @@
       hit = scenes().find((s) => s.id === sceneId);
       if (!hit) throw new Error(`No scene with id '${sceneId}'. Use list_scenes.`);
     } else {
-      const q = String(sceneName).trim().toLowerCase();
-      const hits = scenes().filter((s) => String(s.title || "").trim().toLowerCase() === q);
+      const q = window.AVTT_MCP.nameKey(sceneName);
+      const hits = scenes().filter((s) => window.AVTT_MCP.nameKey(s.title || "") === q);
       if (!hits.length) throw new Error(`No scene named '${sceneName}'. Use list_scenes.`);
       if (hits.length > 1) throw new Error(`${hits.length} scenes are named '${sceneName}'. Use sceneId: ${hits.map((h) => h.id).join(", ")}.`);
       hit = hits[0];
@@ -133,8 +133,8 @@
       return tokens[tokenId];
     }
     if (!tokenName) throw new Error("Say which token: tokenId or tokenName.");
-    const q = String(tokenName).trim().toLowerCase();
-    const hits = Object.values(tokens).filter((o) => String(o.name || "").trim().toLowerCase() === q);
+    const q = window.AVTT_MCP.nameKey(tokenName);
+    const hits = Object.values(tokens).filter((o) => window.AVTT_MCP.nameKey(o.name || "") === q);
     if (!hits.length) {
       const near = Object.values(tokens).filter((o) => String(o.name || "").toLowerCase().includes(q)).map((o) => `'${o.name}'`).slice(0, 10);
       throw new Error(`No token named '${tokenName}' on '${sceneTitle}'.${near.length ? ` Close matches: ${near.join(", ")}.` : " Use list_scene_tokens."}`);
@@ -297,7 +297,7 @@
     // Size.
     let squares;
     if (p.size !== undefined) {
-      squares = typeof p.size === "number" ? p.size : SIZES[String(p.size).trim().toLowerCase()];
+      squares = typeof p.size === "number" ? p.size : SIZES[window.AVTT_MCP.nameKey(p.size)];
       if (!(squares > 0 && squares <= 20)) throw new Error("size must be Tiny, Small, Medium, Large, Huge, Gargantuan, or a number of squares (0.5–20).");
       if (squaresOf(o, data) !== squares) changed.push("size");
       else squares = undefined;

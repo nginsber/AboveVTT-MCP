@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nameField, cleanName } from "../names.js";
 import { errorResult } from "../util.js";
 import { logChange } from "../changelog.js";
 
@@ -20,7 +21,7 @@ export function register(server, bridge) {
         scenes: z
           .array(
             z.object({
-              title: z.string().describe("Scene title."),
+              title: nameField().describe("Scene title."),
               mapUrl: z.string().optional().describe("Public link to the map image or video (can be added later)."),
               config: z.record(z.string(), value).optional().describe("Optional configuration, keys as in get_scene_config."),
             })
@@ -34,6 +35,8 @@ export function register(server, bridge) {
     },
     async ({ tabId, ...params }) => {
       try {
+        // a title inside config is shown as HTML too: same rules as the title field (see names.js)
+        params.scenes = params.scenes.map((s) => (typeof s.config?.title === "string" ? { ...s, config: { ...s.config, title: cleanName(s.config.title, "Scene title") } } : s));
         const r = await bridge.call("create_scene", params, { tabId, timeoutMs: 60000 });
         const lines = [`Created in ${r.folder}:`];
         for (const c of r.created) {

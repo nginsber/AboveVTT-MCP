@@ -53,8 +53,8 @@
       hit = realScenes.find(({ s }) => s.id === sceneId);
       if (!hit) throw new Error(`No scene with id '${sceneId}'. Use list_scenes to find ids.`);
     } else if (sceneTitle) {
-      const q = String(sceneTitle).trim().toLowerCase();
-      const found = realScenes.filter(({ s }) => String(s.title || "").trim().toLowerCase() === q);
+      const q = window.AVTT_MCP.nameKey(sceneTitle);
+      const found = realScenes.filter(({ s }) => window.AVTT_MCP.nameKey(s.title || "") === q);
       if (found.length === 0) throw new Error(`No scene titled '${sceneTitle}'. Use list_scenes to find it.`);
       if (found.length > 1) {
         throw new Error(`${found.length} scenes are titled '${sceneTitle}': ` +
@@ -178,7 +178,7 @@
 
   function toBool(v, key) {
     if (typeof v === "boolean") return v;
-    const s = String(v).trim().toLowerCase();
+    const s = window.AVTT_MCP.nameKey(v);
     if (["1", "true", "on", "yes"].includes(s)) return true;
     if (["0", "false", "off", "no"].includes(s)) return false;
     throw new Error(`'${key}' is an on/off setting; use true or false.`);
@@ -195,8 +195,8 @@
     }
     if (f.type === "select") {
       const choices = el.find("option").map((_, o) => ({ value: String(o.value), label: $(o).text() })).get();
-      const s = String(value).trim().toLowerCase();
-      const hit = choices.find((c) => c.value.toLowerCase() === s) || choices.find((c) => c.label.trim().toLowerCase() === s);
+      const s = window.AVTT_MCP.nameKey(value);
+      const hit = choices.find((c) => c.value.toLowerCase() === s) || choices.find((c) => window.AVTT_MCP.nameKey(c.label) === s);
       if (!hit) {
         throw new Error(`'${value}' is not a choice for '${f.key}'. Choices: ` + choices.map((c) => `${c.label} (${c.value})`).join(", "));
       }

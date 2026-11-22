@@ -53,8 +53,8 @@
       return t;
     }
     if (!trackName) throw new Error("Say which track: trackId or trackName.");
-    const q = String(trackName).trim().toLowerCase();
-    const hits = all.filter((x) => x.name.trim().toLowerCase() === q);
+    const q = window.AVTT_MCP.nameKey(trackName);
+    const hits = all.filter((x) => window.AVTT_MCP.nameKey(x.name) === q);
     if (!hits.length) {
       const near = all.filter((x) => x.name.toLowerCase().includes(q)).slice(0, 8).map((x) => `'${x.name}'`);
       throw new Error(`No track named '${trackName}'.${near.length ? ` Close: ${near.join(", ")}.` : " Use list_tracks."}`);
@@ -79,8 +79,8 @@
       return playlistId;
     }
     if (!playlistName) throw new Error("Say which playlist: playlistId or playlistName.");
-    const q = String(playlistName).trim().toLowerCase();
-    const hits = Object.entries(pls).filter(([id, p]) => id !== "selected" && String(p?.name || "").trim().toLowerCase() === q);
+    const q = window.AVTT_MCP.nameKey(playlistName);
+    const hits = Object.entries(pls).filter(([id, p]) => id !== "selected" && window.AVTT_MCP.nameKey(p?.name || "") === q);
     if (!hits.length) throw new Error(`No playlist named '${playlistName}'. Playlists: ${Object.entries(pls).filter(([id]) => id !== "selected").map(([, p]) => `'${p.name}'`).join(", ") || "none"}.`);
     if (hits.length > 1) throw new Error(`${hits.length} playlists are named '${playlistName}'. Use playlistId.`);
     return hits[0][0];
@@ -115,7 +115,7 @@
     let all = tracks();
     const tagCounts = {};
     for (const t of all) for (const g of t.tags) tagCounts[g] = (tagCounts[g] || 0) + 1;
-    if (tag) { const q = String(tag).trim().toLowerCase(); all = all.filter((t) => t.tags.some((g) => g.toLowerCase() === q)); }
+    if (tag) { const q = window.AVTT_MCP.nameKey(tag); all = all.filter((t) => t.tags.some((g) => g.toLowerCase() === q)); }
     if (search) { const q = String(search).toLowerCase(); all = all.filter((t) => t.name.toLowerCase().includes(q) || t.tags.some((g) => g.toLowerCase().includes(q))); }
     all.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
     return { total: tracks().length, shown: all.length, tags: tagCounts, tracks: all };
@@ -184,7 +184,7 @@
     for (const id of trackIds || []) { const t = findTrack(all, { trackId: id }); pick.set(t.id, t); }
     for (const n of trackNames || []) { const t = findTrack(all, { trackName: n }); pick.set(t.id, t); }
     if (tag) {
-      const q = String(tag).trim().toLowerCase();
+      const q = window.AVTT_MCP.nameKey(tag);
       const hits = all.filter((t) => t.tags.some((g) => g.toLowerCase() === q));
       if (!hits.length) throw new Error(`No tracks are tagged '${tag}'.`);
       for (const t of hits) pick.set(t.id, t);
@@ -226,7 +226,7 @@
     for (const id of trackIds) out.push(findTrack(all, { trackId: id }));
     for (const n of names) out.push(findTrack(all, { trackName: n }));
     if (tag) {
-      const q = String(tag).trim().toLowerCase();
+      const q = window.AVTT_MCP.nameKey(tag);
       const hits = all.filter((t) => t.tags.some((g) => g.toLowerCase() === q)).sort((a, b) => a.name.localeCompare(b.name));
       if (!hits.length) throw new Error(`No tracks are tagged '${tag}'.`);
       out.push(...hits);
@@ -254,7 +254,7 @@
     }
     // Removing: by track name (or channelId from list_playlists).
     for (const r of removeTracks) {
-      const q = String(r).trim().toLowerCase();
+      const q = window.AVTT_MCP.nameKey(r);
       const hits = Object.entries(p.channels).filter(([c, ch]) => c === r || String(ch?.name || "").toLowerCase() === q);
       if (!hits.length) { notes.push(`'${r}' isn't in this playlist.`); continue; }
       if (hits.some(([, ch]) => ch.token)) throw new Error(`'${r}' is a token's sound (placed on a map); remove it from the token instead.`);

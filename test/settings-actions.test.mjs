@@ -18,7 +18,7 @@ w.eval(`var ItemType={Folder:'folder',MyToken:'myToken',Monster:'monster',PC:'pc
   function find_game_id(){return '8258198'} function noisy_log(){} function get_avtt_setting_is_global(){return false}
   window.savedTC=0; function persist_all_token_customizations(list, cb){ window.savedTC++; cb && cb() }
   function showError(e){ throw e } function migrate_convert_mytokens_to_customizations(){return []} function migrate_tokendata(){return []}
-  window.migrated=[]; var AboveApi={ async migrateScenes(g,s){ window.migrated.push(...s.map(x=>x.title)) }, async exportScenes(secret){ return secret==='8258198-old' ? [{id:'r1',title:'Old Cave'},{id:'r2',title:'Old Keep'}] : [] } };`);
+  window.migrated=[]; var AboveApi={ async migrateScenes(g,s){ window.migrated.push(...s.map(x=>x.title)) }, async exportScenes(secret){ if(secret==='8258198-leakysecret9') throw new Error('bad request for '+secret); return secret==='8258198-old' ? [{id:'r1',title:'Old Cave'},{id:'r2',title:'Old Keep'}] : [] } };`);
 // real TokenCustomization class
 const TC = fs.readFileSync(A + "TokenCustomization.js", "utf8");
 const ci = TC.indexOf("class TokenCustomization"); let d = 0, cj = TC.indexOf("{", ci); for (let k = cj; k < TC.length; k++) { if (TC[k] == "{") d++; else if (TC[k] == "}") { d--; if (!d) { cj = k + 1; break; } } }
@@ -29,7 +29,7 @@ for (const fn of ["b64EncodeUnicode", "b64DecodeUnicode", "build_import_loading_
 w.eval("function set_avtt_setting_value(n,v){ window.EXPERIMENTAL_SETTINGS[n]=v }");
 for (const f of ["page.js", "settings_actions.js"]) w.eval(fs.readFileSync(X + f, "utf8"));
 const out = {}; w.addEventListener("message", (e) => { if (e.data?.payload?.type === "result") out[e.data.payload.id] = e.data.payload; });
-let id = 0; const call = async (method, params) => { const my = ++id; w.dispatchEvent(new w.MessageEvent("message", { data: { channel: "avtt-mcp:ext", payload: { type: "call", id: my, method, params } }, source: w })); for (let t = 0; t < 200 && !out[my]; t++) await new Promise((r) => setTimeout(r, 10)); return out[my]; };
+let id = 0; const call = (method, params) => w.__avttMcpRun(method, params); // the locked entry point background.js uses
 const show = (label, r) => console.log(label.padEnd(26), r.ok ? JSON.stringify(r.result).slice(0, 330) : "ERROR: " + r.error);
 for (const a of ["exportCurrentScene", "exportTokenCustomizations", "exportJournal", "exportAudio"]) show(a, await call("settings_action", { action: a }));
 console.log("  downloads:", w.downloads.map((x) => x.filename).join(", "));
@@ -41,6 +41,9 @@ console.log("  stored settings:", w.localStorage.getItem("ExperimentalSettings82
 show("recover (no id)", await call("settings_action", { action: "recoverScenes" }));
 show("recover wrong campaign", await call("settings_action", { action: "recoverScenes", oldInviteId: "999-abc" }));
 show("recover (dry)", await call("settings_action", { action: "recoverScenes", oldInviteId: "https://www.dndbeyond.com/campaigns/join/8258198-old", dryRun: true }));
+{ const r = await call("settings_action", { action: "recoverScenes", oldInviteId: "8258198-leakysecret9", dryRun: true });
+  show("recover error scrubbed", r);
+  if (r.ok || /leakysecret/.test(r.error)) { console.log("FAIL: invite secret leaked in error"); process.exit(1); } }
 // import round trip using the token export produced above
 const tokenFile = w.downloads.find((x) => x.filename.endsWith("-token.abovevtt")).data;
 const full = w.b64EncodeUnicode(JSON.stringify({ version: 2, scenes: [{ id: "s1", title: "The Tavern" }, { id: "s9", title: "New Import" }], tokencustomizations: [{ id: "g2", tokenType: "myToken", parentId: "myTokensFolder", rootId: "myTokensFolder", tokenOptions: { name: "Orc" } }], notes: { n1: { title: "Note 1 v2" }, n7: { title: "Fresh" } }, journalchapters: [{ id: "c2", title: "Ch2", notes: ["n7"] }], soundpads: { pad2: {} }, tracklibrary: [[5, { name: "x" }]], mixerstate: { vol: 0.5 } }));

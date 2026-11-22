@@ -36,7 +36,7 @@ w.eval(`function default_options(){ return { aura1:{color:'rgba(255, 129, 0, 0.3
 for (const f of ["page.js", "settings.js", "notes.js", "creatures.js", "tokens.js"]) w.eval(fs.readFileSync(X + f, "utf8"));
 w.AVTT_MCP._remoteCheckDelay = 10;
 const out = {}; w.addEventListener("message", (e) => { if (e.data?.payload?.type === "result") out[e.data.payload.id] = e.data.payload; });
-let id = 0; const call = async (method, params) => { const my = ++id; w.dispatchEvent(new w.MessageEvent("message", { data: { channel: "avtt-mcp:ext", payload: { type: "call", id: my, method, params } }, source: w })); for (let t = 0; t < 300 && !out[my]; t++) await new Promise((r) => setTimeout(r, 10)); return out[my]; };
+let id = 0; const call = (method, params) => w.__avttMcpRun(method, params); // the locked entry point background.js uses
 const show = (label, r) => console.log(label.padEnd(22), r ? (r.ok ? JSON.stringify(r.result).slice(0, 420) : "ERROR: " + r.error) : "TIMEOUT");
 const T = (i) => w.TOKEN_OBJECTS[i];
 show("list", await call("list_scene_tokens", {}));

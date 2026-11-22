@@ -251,9 +251,9 @@
   }
   let lastReport = "";
   function report() {
-    // page.js sends tab info every 3 s when it changes; nudge it so the MCP sees a role change sooner
+    // page.js checks tab info every 3 s; nudge background.js now so the MCP sees a role change sooner
     const key = `${me.role}`;
-    if (key !== lastReport) { lastReport = key; window.postMessage({ channel: "avtt-mcp:page", payload: { type: "info", info: M.info() } }, location.origin); }
+    if (key !== lastReport) { lastReport = key; M.nudge(); }
   }
 
   M.presence = {

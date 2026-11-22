@@ -35,7 +35,7 @@ w.eval(`window.gameId='1'; window.DM=true; window.MB={sendMessage(){}}; window.S
         notes:{backstory:'<p>Exiled from the mountain.</p>', allies:'Bob', otherNotes:null}, age:'120', height:"4'5\\"" } } };`);
 for (const f of ["page.js", "characters.js"]) w.eval(fs.readFileSync(X + f, "utf8"));
 const out = {}; w.addEventListener("message", (e) => { if (e.data?.payload?.type === "result") out[e.data.payload.id] = e.data.payload; });
-let id = 0; const call = async (method, params) => { const my = ++id; w.dispatchEvent(new w.MessageEvent("message", { data: { channel: "avtt-mcp:ext", payload: { type: "call", id: my, method, params } }, source: w })); for (let t = 0; t < 100 && !out[my]; t++) await new Promise((r) => setTimeout(r, 10)); return out[my]; };
+let id = 0; const call = (method, params) => w.__avttMcpRun(method, params); // the locked entry point background.js uses
 const show = (label, r) => console.log(label.padEnd(18), r ? (r.ok ? JSON.stringify(r.result).slice(0, 900) : "ERROR: " + r.error) : "TIMEOUT");
 show("list", await call("list_characters", {}));
 show("get Thorin", await call("get_character", { characterName: "thorin" }));

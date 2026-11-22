@@ -68,8 +68,8 @@
       if (!f) throw new Error(`No My Tokens folder with id '${folderId}'. Use list_creatures to see folders.`);
       return f;
     }
-    const q = String(folderName).trim().toLowerCase();
-    const hits = pool.filter((x) => nameOf(x).trim().toLowerCase() === q);
+    const q = window.AVTT_MCP.nameKey(folderName);
+    const hits = pool.filter((x) => window.AVTT_MCP.nameKey(nameOf(x)) === q);
     if (!hits.length) throw new Error(`No My Tokens folder named '${folderName}'. Create it with create_creature_folder.`);
     if (hits.length > 1) throw new Error(`${hits.length} folders are named '${folderName}': ${hits.map((h) => `${pathOf(h)} [${h.id}]`).join("; ")}. Use folderId.`);
     return hits[0];
@@ -83,8 +83,8 @@
       return c;
     }
     if (creatureName) {
-      const q = String(creatureName).trim().toLowerCase();
-      const hits = pool.filter((x) => nameOf(x).trim().toLowerCase() === q);
+      const q = window.AVTT_MCP.nameKey(creatureName);
+      const hits = pool.filter((x) => window.AVTT_MCP.nameKey(nameOf(x)) === q);
       if (!hits.length) throw new Error(`No custom creature named '${creatureName}'. Use list_creatures (with search) to find it.`);
       if (hits.length > 1) throw new Error(`${hits.length} creatures are named '${creatureName}': ${hits.map((h) => `${pathOf(h)} [${h.id}]`).join("; ")}. Use creatureId.`);
       return hits[0];
@@ -203,7 +203,7 @@
       vision: window.TOKEN_SETTINGS?.vision?.color ?? "rgba(142, 142, 142, 1)",
     };
     if (input.size !== undefined) {
-      const v = typeof input.size === "number" ? input.size : SIZES[String(input.size).trim().toLowerCase()];
+      const v = typeof input.size === "number" ? input.size : SIZES[window.AVTT_MCP.nameKey(input.size)];
       if (![0.5, 1, 2, 3, 4].includes(v)) throw new Error("size must be Tiny, Small, Medium, Large, Huge or Gargantuan (or 0.5, 1, 2, 3, 4 squares).");
       patch.tokenSize = v;
     }

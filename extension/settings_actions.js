@@ -168,7 +168,11 @@
             note: "Pass oldInviteId (the code after /campaigns/join/ in an old invite link) or previousIndex." };
         }
         if (!secret.startsWith(String(window.CAMPAIGN_INFO?.id))) throw new Error("That invite id doesn't belong to this campaign (AboveVTT checks this too).");
-        const scenes = await AboveApi.exportScenes(secret);
+        // Never let the old invite secret come back to Claude, even inside an error message.
+        const scrub = (m) => String(m ?? "").split(secret).join(mask(secret));
+        let scenes;
+        try { scenes = await AboveApi.exportScenes(secret); }
+        catch (err) { throw new Error(`Couldn't read scenes for that invite id: ${scrub(err?.message || err)}`); }
         if (!scenes || !scenes.length) return { action, found: 0, note: "No scenes found for that invite id." };
         if (dryRun) return { action, dryRun: true, found: scenes.length, titles: scenes.slice(0, 30).map((s) => s.title || "(untitled)") };
         if (typeof build_import_loading_indicator === "function") build_import_loading_indicator("Preparing Import");
@@ -176,7 +180,7 @@
           await AboveApi.migrateScenes(window.gameId, scenes);
         } catch (err) {
           $(".import-loading-indicator").remove();
-          throw new Error(`Recovery failed: ${err?.message || err}`);
+          throw new Error(`Recovery failed: ${scrub(err?.message || err)}`);
         }
         setTimeout(() => location.reload(), 1500); // AboveVTT reloads after recovery as well
         return { action, done: true, recovered: scenes.length, reloading: true };
