@@ -16,7 +16,7 @@ w.eval(strip(fs.readFileSync(A + "helpers.js", "utf8")) + strip(fs.readFileSync(
   window.MIXER.addPlaylist('Default', true); window.MIXER.addChannel(Object.assign(new Channel('Battle Drums','https://x/drums.mp3'),{paused:false}));`);
 for (const f of ["page.js", "music.js"]) w.eval(fs.readFileSync(X + f, "utf8"));
 const out = {}; w.addEventListener("message", (e) => { if (e.data?.payload?.type === "result") out[e.data.payload.id] = e.data.payload; });
-let id = 0; const call = async (method, params) => { const my = ++id; w.dispatchEvent(new w.MessageEvent("message", { data: { channel: "avtt-mcp:ext", payload: { type: "call", id: my, method, params } }, source: w })); for (let t = 0; t < 100 && !out[my]; t++) await new Promise((r) => setTimeout(r, 10)); return out[my]; };
+let id = 0; const call = (method, params) => w.__avttMcpRun(method, params); // the locked entry point background.js uses
 const show = (label, r) => console.log(label.padEnd(22), r ? (r.ok ? JSON.stringify(r.result).slice(0, 380) : "ERROR: " + r.error) : "TIMEOUT");
 show("list", await call("list_tracks", {}));
 show("add", await call("add_tracks", { tracks: [{ name: "Cave Drips", src: "https://x/cave.ogg", tags: "Dungeon, Ambience" }, { name: "Tavern Ambience", src: "https://x/tavern2.mp3" }, { name: "Dup link", src: "https://x/drums.mp3" }] }));

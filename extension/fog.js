@@ -26,8 +26,8 @@
       hit = scenes().find((s) => s.id === sceneId);
       if (!hit) throw new Error(`No scene with id '${sceneId}'. Use list_scenes.`);
     } else {
-      const q = String(sceneName).trim().toLowerCase();
-      const hits = scenes().filter((s) => String(s.title || "").trim().toLowerCase() === q);
+      const q = window.AVTT_MCP.nameKey(sceneName);
+      const hits = scenes().filter((s) => window.AVTT_MCP.nameKey(s.title || "") === q);
       if (!hits.length) throw new Error(`No scene named '${sceneName}'. Use list_scenes.`);
       if (hits.length > 1) throw new Error(`${hits.length} scenes are named '${sceneName}'. Use sceneId: ${hits.map((h) => h.id).join(", ")}.`);
       hit = hits[0];

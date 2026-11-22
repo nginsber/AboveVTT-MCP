@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nameField } from "../names.js";
 import { errorResult } from "../util.js";
 import { logChange } from "../changelog.js";
 
@@ -16,7 +17,7 @@ const condition = z.union([
   z.string(),
   z.object({
     name: z.string().describe("Condition (e.g. Poisoned), marker (e.g. Blessed, Concentration) or marker colour (red, blue…)."),
-    text: z.string().optional().describe("Label for a coloured marker."),
+    text: nameField().optional().describe("Label for a coloured marker."),
     duration: z.number().optional().describe("Rounds."),
   }),
 ]);
@@ -86,7 +87,7 @@ export function register(server, bridge) {
       "Player characters' name, HP, AC and standard conditions come from their D&D Beyond sheet and can't be set here. Use dryRun to preview.",
     inputSchema: {
       ...scene, ...which,
-      name: z.string().optional(),
+      name: nameField().optional(),
       ac: z.number().optional(),
       hp: z.number().optional().describe("Current HP (not counting temp HP)."),
       maxHp: z.number().optional(),
@@ -134,7 +135,7 @@ export function register(server, bridge) {
       format: z.enum(["text", "html"]).optional(),
       mode: z.enum(["replace", "append", "prepend"]).optional(),
       visibility: z.union([z.string(), z.array(z.string())]).optional(),
-      title: z.string().optional().describe("Defaults to the token's name."),
+      title: nameField().optional().describe("Defaults to the token's name."),
       delete: z.boolean().optional(),
       dryRun: z.boolean().optional(),
       ...tab,

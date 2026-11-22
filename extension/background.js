@@ -1,7 +1,7 @@
 // Service worker: keeps a WebSocket to the local AboveVTT MCP server and routes
 // calls to the campaign tab(s) through relay.js. Methods starting with "ext_" are
 // handled here in the service worker itself (e.g. reading a map image for step 15).
-importScripts("grid_detect.js", "badge.js");
+importScripts("grid_detect.js", "badge.js", "netguard.js");
 
 const EXT_VERSION = chrome.runtime.getManifest().version;
 const DEFAULT_PORT = 47321;
@@ -25,17 +25,11 @@ chrome.runtime.onConnect.addListener((port) => {
   const tabId = port.sender.tab.id;
   tabs.set(tabId, { port, info: { url: port.sender.tab.url }, updatedAt: Date.now() });
 
-  port.onMessage.addListener((msg) => {
-    if (msg?.type === "info") {
-      const entry = tabs.get(tabId);
-      if (entry) { entry.info = msg.info; entry.updatedAt = Date.now(); }
-      sendTabs();
-    } else if (msg?.type === "result") {
-      inFlight.delete(msg.id);
-      sendToServer(msg);
-    }
-  });
-  sendIdentity(port);
+  // The tab only nudges; info and results are read with chrome.scripting, never taken from page messages
+  // (security review item 2: page scripts could fake those).
+  port.onMessage.addListener((msg) => { if (msg?.type === "infoChanged") fetchInfo(tabId); });
+  sendIdentity(tabId);
+  fetchInfo(tabId);
   port.onDisconnect.addListener(() => {
     tabs.delete(tabId);
     for (const [id, t] of inFlight) {
@@ -50,11 +44,34 @@ chrome.runtime.onConnect.addListener((port) => {
   ensureConnected();
 });
 
+/** Run a function in a campaign tab's main world (next to AboveVTT and page.js) and return its result. */
+async function inPage(tabId, func, args = []) {
+  const [res] = await chrome.scripting.executeScript({ target: { tabId }, world: "MAIN", func, args });
+  return res?.result;
+}
+
 /** Tell a tab (or all) which browser this is, for presence messages between DM tabs (review item 3b). */
-async function sendIdentity(port) {
+async function sendIdentity(tabId) {
   const { browserId, browserName } = await settings();
-  const msg = { type: "identity", browserId, browserName };
-  for (const p of port ? [port] : [...tabs.values()].map((t) => t.port)) { try { p.postMessage(msg); } catch { /* tab gone */ } }
+  for (const id of tabId != null ? [tabId] : [...tabs.keys()]) {
+    inPage(id, (ident) => { if (typeof window.__avttMcpSetIdentity === "function") window.__avttMcpSetIdentity(ident); }, [{ browserId, browserName }])
+      .catch(() => { /* tab gone or still loading; it gets the identity when it connects again */ });
+  }
+}
+
+/** Read a tab's info from page.js (when it nudges, or when it connects). One read at a time per tab. */
+const infoReads = new Map(); // tabId -> "busy" | "again"
+async function fetchInfo(tabId) {
+  if (infoReads.has(tabId)) { infoReads.set(tabId, "again"); return; }
+  infoReads.set(tabId, "busy");
+  try {
+    const info = await inPage(tabId, () => (typeof window.__avttMcpInfo === "function" ? window.__avttMcpInfo() : null));
+    const entry = tabs.get(tabId);
+    if (entry && info && typeof info === "object") { entry.info = info; entry.updatedAt = Date.now(); sendTabs(); }
+  } catch { /* tab closed or navigating */ }
+  const again = infoReads.get(tabId) === "again";
+  infoReads.delete(tabId);
+  if (again && tabs.has(tabId)) fetchInfo(tabId);
 }
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && changes.browserName) sendIdentity();
@@ -145,7 +162,20 @@ function routeCall(msg) {
     return;
   }
   inFlight.set(msg.id, tabId);
-  tabs.get(tabId).port.postMessage({ type: "call", id: msg.id, method: msg.method, params: msg.params });
+  // The command and its result travel through Chrome itself, not the page (security review item 2).
+  inPage(tabId, async (method, params) => {
+    const run = window.__avttMcpRun;
+    if (typeof run !== "function") return { ok: false, error: "The AboveVTT MCP Bridge isn't loaded in this tab yet. Refresh the AboveVTT tab." };
+    return run(method, params);
+  }, [msg.method, msg.params ?? {}])
+    .then((r) => (r && typeof r === "object" ? { ok: !!r.ok, ...(r.ok ? { result: r.result ?? null } : { error: String(r.error || "Unknown error") }) }
+      : { ok: false, error: "No answer from the AboveVTT tab." }))
+    .catch((e) => ({ ok: false, error: /removed|No tab with id|closed|navigat|Frame/i.test(String(e?.message)) ? "The AboveVTT tab was closed or reloaded before answering." : `Couldn't reach the AboveVTT tab: ${e?.message || e}` }))
+    .then((r) => {
+      if (!inFlight.has(msg.id)) return; // already answered (tab closed)
+      inFlight.delete(msg.id);
+      sendToServer({ type: "result", id: msg.id, ...r });
+    });
 }
 
 // ---------- calls handled in the service worker ------------------------------
@@ -168,8 +198,13 @@ async function detectGridFromUrl({ url, minSquare, maxSquare }) {
   if (!(await chrome.permissions.contains({ origins: IMAGE_ORIGINS }))) {
     throw new Error("The extension isn't allowed to read map images yet. Open the AboveVTT MCP Bridge options page (click its icon) and click 'Allow reading map images', then try again.");
   }
+  const blocked = self.AVTT_blockedImageUrl(u);
+  if (blocked) throw new Error(`Map image not read: ${blocked}`);
   let res;
-  try { res = await fetch(u, { credentials: "omit" }); } catch (e) { throw new Error(`Couldn't download the map image: ${e?.message || e}`); }
+  try { res = await fetch(u, { credentials: "omit", referrerPolicy: "no-referrer" }); } catch (e) { throw new Error(`Couldn't download the map image: ${e?.message || e}`); }
+  // A public link can redirect to a local one: refuse to read what came back.
+  const landed = res.redirected ? self.AVTT_blockedImageUrl(res.url) : null;
+  if (landed) { res.body?.cancel?.(); throw new Error(`Map image not read: the link redirected to a blocked address (${landed})`); }
   if (!res.ok) throw new Error(`Couldn't download the map image (HTTP ${res.status}).`);
   const blob = await res.blob();
   if (/^video\//i.test(blob.type)) throw new Error("This map is a video; grid detection only works on images.");

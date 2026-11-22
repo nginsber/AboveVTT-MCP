@@ -79,7 +79,7 @@ const acPart = TP.slice(acStart, acStart + TP.slice(acStart).indexOf("if(newAC =
 w.eval(`function aboveVttReads(options){ let hpVal; ${place} ${acPart} options.armorClass=newAC; } return options; }`);
 for (const f of ["page.js", "settings.js", "notes.js", "creatures.js", "copy_tokens.js"]) w.eval(fs.readFileSync(X + f, "utf8"));
 const out = {}; w.addEventListener("message", (e) => { if (e.data?.payload?.type === "result") out[e.data.payload.id] = e.data.payload; });
-let id = 0; const call = async (method, params) => { const my = ++id; w.dispatchEvent(new w.MessageEvent("message", { data: { channel: "avtt-mcp:ext", payload: { type: "call", id: my, method, params } }, source: w })); for (let t = 0; t < 500 && !out[my]; t++) await new Promise((r) => setTimeout(r, 10)); return out[my]; };
+let id = 0; const call = (method, params) => w.__avttMcpRun(method, params); // the locked entry point background.js uses
 let fails = 0;
 const check = (label, cond, extra = "") => { console.log((cond ? "ok   " : "FAIL ") + label, cond ? "" : extra); if (!cond) fails++; };
 const R = (r) => (r?.ok ? r.result : { error: r?.error ?? "TIMEOUT" });

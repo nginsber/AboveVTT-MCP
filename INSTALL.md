@@ -1,6 +1,6 @@
 # Installing AboveVTT MCP
 
-> ⚠️ **Tested only on Windows 11, Google Chrome, Claude desktop for Windows, and AboveVTT 1.61** (the current version as of November 2026). These steps are written for that setup.
+> ⚠️ These steps are written for **Windows**. On a Mac, follow them with the changes in **[On a Mac](#on-a-mac)**. The setups that have been tested are listed in **[AboveVTT MCP compatibility](COMPATIBILITY.md)**.
 
 About 10 minutes. You'll:
 
@@ -12,13 +12,28 @@ About 10 minutes. You'll:
 
 ## What you need
 
-- **Windows 11.**
+- **Windows 11**, or **macOS** (see [On a Mac](#on-a-mac)).
 - **Google Chrome** with the **AboveVTT** extension installed and working.
-- **Claude desktop** for Windows, signed in.
+- **Claude desktop**, signed in.
 - A D&D Beyond campaign where **you are the DM**. Test in a throwaway campaign first.
 - **Node.js 20 or newer**. See step 1.
 
-> **Browser-only AI chats won't work.** The connector is a program that runs on your PC, so it needs an AI app that can start a local MCP server on the same PC as Chrome. AI chats used only in a web browser (for example ChatGPT, Gemini, or Claude at claude.ai) can't start local programs, so they can't use this connector. These steps use Claude desktop. Other MCP clients that can start a local server, such as Claude Code or VS Code, should also work, but they haven't been tested.
+> **Browser-only AI chats won't work.** The connector is a program that runs on your PC, so it needs an AI app that can start a local MCP server on the same PC as Chrome. AI chats used only in a web browser (for example ChatGPT, Gemini, or Claude at claude.ai) can't start local programs, so they can't use this connector. These steps use Claude desktop. Other MCP clients that can start a local server should also work: Claude Code has been tried on a Mac (see [compatibility](COMPATIBILITY.md)); others, such as VS Code, haven't been tested.
+
+---
+
+## On a Mac
+
+The steps are the same, with these differences:
+
+| Step | On a Mac |
+|---|---|
+| 1. Node.js | Open **Terminal** and run `node -v`. Then run `which node` and note the full path it prints (for example `/opt/homebrew/bin/node` or `/usr/local/bin/node`). |
+| 3. Config file | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| 3. `command` | Must be the **full path** to `node` from `which node`; plain `node` isn't found when Claude desktop starts the server. Paths use single forward slashes, for example `"command": "/opt/homebrew/bin/node"` and `"args": ["/Users/<you>/AboveVTT-MCP/server/dist/abovevtt-mcp.mjs"]`. |
+| 3. Fully quit | Press **Cmd+Q** in Claude desktop (closing the window isn't enough), then start it again. |
+| 3. Token file | `~/.abovevtt-mcp/bridge-token.txt`. In Finder press **Cmd+Shift+G** and type `~/.abovevtt-mcp` to reach this hidden folder. |
+| 4. Load unpacked | In the folder picker press **Cmd+Shift+G** to type a path, which also reaches hidden folders, for example `~/AboveVTT-MCP/extension`. |
 
 ---
 
@@ -96,7 +111,7 @@ You don't need to run `npm install`. `server\dist\abovevtt-mcp.mjs` is already b
 4. From the puzzle-piece menu, **pin** "AboveVTT MCP Bridge" so you can see its badge.
 5. Click the extension's icon to open its options page. Paste the token, leave the port at **47321**, optionally give this browser a name (for example *Desktop*), and click **Save and connect**.
 
-6. Optional, for grid detection: on the same options page click **Allow reading map images** and accept Chrome's prompt. This lets the extension download a scene's map image to measure its grid. You can remove it again from the same page.
+6. Optional, for grid detection: on the same options page click **Allow reading map images** and accept Chrome's prompt. This lets the extension download a scene's map image to measure its grid. You can remove it again from the same page. It's only used for maps on the internet: links to this computer or your local network (for example `localhost` or `192.168.x.x`) are refused.
 
 The extension's toolbar icon is AboveVTT's red "A" with **MCP** written underneath. The colour of the letters shows whether everything is ready. Hover over it for details.
 
@@ -133,6 +148,7 @@ See [README.md](README.md) for everything it can do.
 | "no campaign tab is open" | Reload the D&D Beyond campaign tab. |
 | "not running as the DM" | Open the campaign from the DM side and start AboveVTT. |
 | "could not open port 47321" | Another program is using that port. Add `"env": { "AVTT_BRIDGE_PORT": "47400" }` to the `abovevtt` entry, and set the same port on the extension's options page. |
+| `detect_grid` says "Map image not read: … local network" | The scene's map link points at this computer or your home network, which map reading never reaches. Use a map hosted on the internet, or set the grid by hand. |
 | A tool says an AboveVTT function wasn't found | AboveVTT was probably updated and changed something inside. Check `status` for the version, and look for a connector update. |
 
 ## Updating

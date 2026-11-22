@@ -42,19 +42,13 @@ function openTab(label, browserId, name, { dm = true } = {}) {
   w.eval(`AVTT_MCP.register("update_note", async (p) => ({ changed: true, p }));
           AVTT_MCP.register("get_note", async () => ({ title: "x" }));
           AVTT_MCP.register("settings_action", async (p) => ({ action: p.action }));`);
-  w.dispatchEvent(new w.MessageEvent("message", { data: { channel: "avtt-mcp:ext", payload: { type: "identity", browserId, browserName: name } }, source: w }));
+  w.__avttMcpSetIdentity({ browserId, browserName: name }); // as background.js does, through chrome.scripting
   w.document.getElementById("map").addEventListener("keydown", () => { tab.keysSeen++; });
   w.addEventListener("message", (e) => { const p = e.data?.payload; if (p?.type === "result") tab.results[p.id] = p; });
   hub.tabs.push(tab);
   return tab;
 }
-let callId = 0;
-async function call(tab, method, params = {}) {
-  const id = ++callId;
-  tab.w.dispatchEvent(new tab.w.MessageEvent("message", { data: { channel: "avtt-mcp:ext", payload: { type: "call", id, method, params } }, source: tab.w }));
-  for (let i = 0; i < 50 && !tab.results[id]; i++) await sleep(5);
-  return tab.results[id];
-}
+const call = (tab, method, params = {}) => tab.w.__avttMcpRun(method, params); // the locked entry point background.js uses
 const role = (t) => t.w.AVTT_MCP.presence.role;
 const overlay = (t) => t.w.document.getElementById("avtt-mcp-pause");
 const overlayText = (t) => overlay(t)?.querySelector(".card")?.textContent || "";

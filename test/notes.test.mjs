@@ -25,7 +25,7 @@ w.eval(`var ItemType={Folder:'folder'}; let n=0; function uuid(){ return 'id'+(+
   window.JOURNAL = new FakeJournal();`);
 for (const f of ["page.js", "notes.js"]) w.eval(fs.readFileSync(X + f, "utf8"));
 const out = {}; w.addEventListener("message", (e) => { if (e.data?.payload?.type === "result") out[e.data.payload.id] = e.data.payload; });
-let id = 0; const call = async (method, params) => { const my = ++id; w.dispatchEvent(new w.MessageEvent("message", { data: { channel: "avtt-mcp:ext", payload: { type: "call", id: my, method, params } }, source: w })); for (let t = 0; t < 100 && !out[my]; t++) await new Promise((r) => setTimeout(r, 10)); return out[my]; };
+let id = 0; const call = (method, params) => w.__avttMcpRun(method, params); // the locked entry point background.js uses
 const show = (label, r) => console.log(label.padEnd(24), r.ok ? JSON.stringify(r.result).slice(0, 300) : "ERROR: " + r.error);
 show("list journal", await call("list_notes", {}));
 show("list all", await call("list_notes", { kind: "all" }));

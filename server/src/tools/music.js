@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nameField } from "../names.js";
 import { errorResult } from "../util.js";
 import { logChange } from "../changelog.js";
 import { guardedCall, previewFooter, confirmTokenField, CONFIRM_STEP } from "../confirm.js";
@@ -45,7 +46,7 @@ export function register(server, bridge) {
     title: "Add tracks to the music library",
     description: "Add up to 50 tracks to AboveVTT's track library by public link (mp3, ogg, wav… on a web host, Dropbox, etc.), with optional tags. A link already in the library is skipped; a name already used gets a number added. Nothing is played.",
     inputSchema: {
-      tracks: z.array(z.object({ name: z.string(), src: z.string().describe("Public http(s) link to the audio file."), tags: tags.optional() })).min(1).max(50),
+      tracks: z.array(z.object({ name: nameField(), src: z.string().describe("Public http(s) link to the audio file."), tags: tags.optional() })).min(1).max(50),
       ...tab,
     },
   }, async ({ tabId, ...p }) => {
@@ -63,7 +64,7 @@ export function register(server, bridge) {
   server.registerTool("update_track", {
     title: "Edit a track in the music library",
     description: "Rename a track, change its link, or set / add / remove tags.",
-    inputSchema: { ...trackWhich, newName: z.string().optional(), src: z.string().optional(), tags: tags.optional().describe("Replace all tags."), addTags: tags.optional(), removeTags: tags.optional(), ...tab },
+    inputSchema: { ...trackWhich, newName: nameField().optional(), src: z.string().optional(), tags: tags.optional().describe("Replace all tags."), addTags: tags.optional(), removeTags: tags.optional(), ...tab },
   }, async ({ tabId, ...p }) => {
     try {
       const r = await call("update_track", p, tabId);
@@ -104,7 +105,7 @@ export function register(server, bridge) {
   server.registerTool("create_playlist", {
     title: "Create a mixer playlist",
     description: "Create a playlist from tracks in the library (by name, id, or everything with a tag). It isn't loaded into the mixer and nothing plays; the DM loads it in the Sounds tab when wanted.",
-    inputSchema: { name: z.string(), tracks: z.array(z.string()).optional().describe("Track names."), trackIds: z.array(z.string()).optional(), tag: z.string().optional(), loop: z.boolean().optional().describe("Loop each track."), ...tab },
+    inputSchema: { name: nameField(), tracks: z.array(z.string()).optional().describe("Track names."), trackIds: z.array(z.string()).optional(), tag: z.string().optional(), loop: z.boolean().optional().describe("Loop each track."), ...tab },
   }, async ({ tabId, ...p }) => {
     try {
       const r = await call("create_playlist", p, tabId);
@@ -117,7 +118,7 @@ export function register(server, bridge) {
   server.registerTool("update_playlist", {
     title: "Edit a mixer playlist",
     description: "Rename a playlist, add library tracks (by name, id or tag; added paused) or remove tracks. The playlist loaded in the mixer can only have its tracks changed while the mixer is paused.",
-    inputSchema: { ...plWhich, newName: z.string().optional(), addTracks: z.array(z.string()).optional(), addTrackIds: z.array(z.string()).optional(), addTag: z.string().optional(), removeTracks: z.array(z.string()).optional().describe("Track names (or channel ids) to take out."), loop: z.boolean().optional().describe("Loop the added tracks."), ...tab },
+    inputSchema: { ...plWhich, newName: nameField().optional(), addTracks: z.array(z.string()).optional(), addTrackIds: z.array(z.string()).optional(), addTag: z.string().optional(), removeTracks: z.array(z.string()).optional().describe("Track names (or channel ids) to take out."), loop: z.boolean().optional().describe("Loop the added tracks."), ...tab },
   }, async ({ tabId, ...p }) => {
     try {
       const r = await call("update_playlist", p, tabId);

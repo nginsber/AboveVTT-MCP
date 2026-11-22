@@ -1,6 +1,7 @@
 // Copy tokens into My Tokens: from a token on any scene, or from the Tokens tab's Monsters, Open5e Monsters,
 // AboveVTT Tokens and D&D Beyond Tokens folders.
 import { z } from "zod";
+import { nameField } from "../names.js";
 import { errorResult } from "../util.js";
 import { logChange } from "../changelog.js";
 
@@ -66,7 +67,7 @@ export function register(server, bridge) {
         tokenId: z.string().optional().describe("scene: token id from list_scene_tokens."),
         sceneId: z.string().optional(),
         sceneName: z.string().optional(),
-        newName: z.string().optional().describe("Name for the copy (default: the original's name)."),
+        newName: nameField().optional().describe("Name for the copy (default: the original's name)."),
         keepOriginalStats: z.boolean().optional().describe("scene: keep the stat block's AC / max HP instead of the token's."),
       })).min(1).max(25),
       folderId: z.string().optional().describe("My Tokens folder id (default: top level)."),

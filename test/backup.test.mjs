@@ -19,8 +19,7 @@ async function run(mode) {
   w.eval(grab(st, "build_import_loading_indicator")); w.eval(grab(st, "export_file"));
   for (const f of ["page.js", "backup.js"]) w.eval(fs.readFileSync(X + f, "utf8"));
   const out = {}; w.addEventListener("message", (e) => { if (e.data?.payload?.type === "result") out[e.data.payload.id] = e.data.payload; });
-  w.dispatchEvent(new w.MessageEvent("message", { data: { channel: "avtt-mcp:ext", payload: { type: "call", id: 1, method: "export_backup", params: { timeoutSeconds: 10 } } }, source: w }));
-  for (let t = 0; t < 600 && !out[1]; t++) await new Promise((r) => setTimeout(r, 25));
+  out[1] = await w.__avttMcpRun("export_backup", { timeoutSeconds: 10 }); // the locked entry point background.js uses
   console.log(mode.padEnd(9), out[1]?.ok ? JSON.stringify(out[1].result) : "ERROR: " + out[1]?.error, "| downloads:", JSON.stringify(w.downloads));
   w.close();
 }

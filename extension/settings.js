@@ -144,15 +144,15 @@
   function coerce(def, value, key = def.name) {
     if (def.type === "toggle") {
       if (typeof value === "boolean") return value;
-      const s = String(value).trim().toLowerCase();
+      const s = window.AVTT_MCP.nameKey(value);
       if (["true", "on", "yes", "1"].includes(s)) return true;
       if (["false", "off", "no", "0"].includes(s)) return false;
       throw new Error(`'${key}' is on/off; use true or false.`);
     }
     if (def.type === "dropdown") {
       const opts = def.options || [];
-      const s = String(value).trim().toLowerCase();
-      const hit = opts.find((o) => String(o.value).toLowerCase() === s) || opts.find((o) => String(o.label ?? "").trim().toLowerCase() === s);
+      const s = window.AVTT_MCP.nameKey(value);
+      const hit = opts.find((o) => String(o.value).toLowerCase() === s) || opts.find((o) => window.AVTT_MCP.nameKey(o.label ?? "") === s);
       if (!hit) throw new Error(`'${value}' is not a choice for '${key}'. Choices: ` + opts.map((o) => `${o.label ?? o.value} (${o.value})`).join(", "));
       return hit.value; // keeps AboveVTT's own type (string, number or boolean)
     }

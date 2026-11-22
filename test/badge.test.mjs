@@ -43,6 +43,10 @@ check("every tooltip ends with 'Click for settings.'", ["connected", "connecting
 // ---- background.js driving the icon ------------------------------------------------------------
 const badge = { text: null, color: null, title: null, iconCalls: 0 };
 let connectListener = null;
+const pageInfo = {}, identities = {}, scripted = [], got = [];
+const strip = ({ tabId: _t, ...rest }) => rest; // real tabs don't report a tabId of their own
+/** The tab's info changes: page.js only nudges; background.js reads the info itself. */
+const report = async (tabId, info, nudge) => { pageInfo[tabId] = strip(info); nudge({ type: "infoChanged" }); await new Promise((r) => setTimeout(r, 5)); };
 const stored = {};
 const sockets = [];
 class FakeWS {
@@ -62,6 +66,15 @@ const chrome = {
     onClicked: ev(),
   },
   permissions: { contains: async () => false },
+  // stand-in for Chrome's scripting API: plays page.js's locked functions in each tab (security review item 2)
+  scripting: { executeScript: async ({ target, world, func, args }) => {
+    const src = func.toString();
+    scripted.push({ tabId: target.tabId, world, src, args });
+    if (src.includes("__avttMcpInfo")) return [{ result: pageInfo[target.tabId] ?? null }];
+    if (src.includes("__avttMcpSetIdentity")) { identities[target.tabId] = args[0]; return [{ result: undefined }]; }
+    if (src.includes("__avttMcpRun")) { got.push(target.tabId); return [{ result: { ok: true, result: { ranIn: target.tabId } } }]; }
+    return [{ result: null }];
+  } },
 };
 const ctx = { chrome, WebSocket: FakeWS, setTimeout, clearTimeout, console, JSON, Date, Map, Math, Number, String, crypto: globalThis.crypto };
 ctx.self = ctx;
@@ -81,17 +94,17 @@ let onMsg, onDisc;
 const port = { name: "avtt-tab", sender: { tab: { id: 7, url: "https://www.dndbeyond.com/campaigns/8275104" } },
   onMessage: { addListener: (f) => { onMsg = f; } }, onDisconnect: { addListener: (f) => { onDisc = f; } }, postMessage() {} };
 connectListener(port);
-onMsg({ type: "info", info: { ...plainTab, tabId: undefined } });
+await report(7, plainTab, onMsg);
 check("tab open, AboveVTT not started → orange", badge.color === O && /isn't running there/.test(badge.title), badge.title);
-onMsg({ type: "info", info: { ...dmTab, tabId: undefined } });
+await report(7, dmTab, onMsg);
 check("AboveVTT starts as DM → green", badge.color === G && /Frozen Sick/.test(badge.title), JSON.stringify(badge));
 const calls = badge.iconCalls;
-for (let i = 0; i < 5; i++) onMsg({ type: "info", info: { ...dmTab, tabId: undefined } });
+for (let i = 0; i < 5; i++) await report(7, dmTab, onMsg);
 check("repeated identical reports don't touch the icon", badge.iconCalls === calls, `${badge.iconCalls} vs ${calls}`);
 onDisc();
 check("tab closed → back to orange", badge.color === O, JSON.stringify(badge));
 connectListener(port);
-onMsg({ type: "info", info: { ...dmTab, tabId: undefined } });
+await report(7, dmTab, onMsg);
 ws.onclose({ code: 1006, reason: "" });
 check("server stops → grey, tooltip still mentions the DM tab", badge.color === GREY && /running as DM/.test(badge.title), JSON.stringify(badge));
 const ws2 = sockets.at(-1);
@@ -113,7 +126,7 @@ const before4 = sockets.length;
 await new Promise((r) => setTimeout(r, 1500));
 check("…and doesn't hammer the server (waits ~30 s, not 1 s)", sockets.length === before4, `${sockets.length - before4} new connection(s)`);
 connectListener(port);
-onMsg({ type: "info", info: { ...dmTab, tabId: undefined } });
+await report(7, dmTab, onMsg);
 await new Promise((r) => setTimeout(r, 700));
 check("…but asks again at once when this browser gets an AboveVTT DM tab", sockets.length === before4 + 1, `${sockets.length - before4} new connection(s)`);
 const hello2 = (await new Promise((r) => setTimeout(() => r(sockets.at(-1)), 10))).sent.find((m) => m.type === "hello");
@@ -157,20 +170,40 @@ check("every status icon has 'MCP' in its own colour, at the right size", true);
 // ---- review item 3b: calls go to the active DM tab, not a paused one ------------------------------
 const wsCall = sockets.at(-1);
 wsCall.onmessage({ data: JSON.stringify({ type: "welcome" }) });
-const got = [];
-const mkPort = (id, info) => {
-  let onM;
+const portMsg = {};
+const mkPort = async (id, info) => {
   const p = { name: "avtt-tab", sender: { tab: { id, url: "https://www.dndbeyond.com/campaigns/8275104" } },
-    onMessage: { addListener: (f) => { onM = f; } }, onDisconnect: { addListener() {} }, postMessage: (m) => { if (m.type === "call") got.push(id); } };
+    onMessage: { addListener: (f) => { portMsg[id] = f; } }, onDisconnect: { addListener() {} }, postMessage() {} };
   connectListener(p);
-  onM({ type: "info", info });
+  await report(id, info, portMsg[id]);
   return p;
 };
-const { tabId: _omit, ...dmInfo } = dmTab; // real tabs don't report a tabId of their own
-mkPort(21, { ...dmInfo, dmRole: "active" });
-mkPort(22, { ...dmInfo, dmRole: "paused" }); // reported more recently
+await mkPort(21, { ...dmTab, dmRole: "active" });
+await mkPort(22, { ...dmTab, dmRole: "paused" }); // reported more recently
+wsCall.sent.length = 0;
 wsCall.onmessage({ data: JSON.stringify({ type: "call", id: "c1", method: "status", params: {} }) });
+await new Promise((r) => setTimeout(r, 10));
 check("a call without a tab goes to the active DM tab, not the more recent paused one", got.at(-1) === 21, JSON.stringify(got));
+
+// ---- security review item 2: commands, results, info and identity go through chrome.scripting --------------
+const run = scripted.filter((c) => c.src.includes("__avttMcpRun")).at(-1);
+check("the command runs in the page's main world through chrome.scripting, with method and params", run?.world === "MAIN" && run.args[0] === "status" && run.tabId === 21, JSON.stringify(run && { world: run.world, args: run.args }));
+const res = wsCall.sent.find((m) => m.type === "result" && m.id === "c1");
+check("…and its result goes back to the server", res?.ok === true && res.result?.ranIn === 21, JSON.stringify(wsCall.sent));
+check("identity is sent through chrome.scripting when a tab connects", identities[21]?.browserId === hello.browserId && identities[21]?.browserName === "Desktop", JSON.stringify(identities));
+wsCall.sent.length = 0;
+portMsg[22]({ type: "result", id: 5, ok: true, result: { forged: true } }); // a page script faking a result through the tab
+await new Promise((r) => setTimeout(r, 10));
+check("a result sent by the page (through the relay) is ignored", !wsCall.sent.some((m) => m.type === "result"), JSON.stringify(wsCall.sent));
+portMsg[22]({ type: "info", info: { ...dmTab, dmRole: "active" } }); // faking tab info
+await new Promise((r) => setTimeout(r, 10));
+const t22 = wsCall.sent.filter((m) => m.type === "tabs").at(-1)?.tabs?.find((t) => t.tabId === 22);
+check("tab info sent by the page is ignored (still paused)", !t22 || t22.dmRole === "paused", JSON.stringify(t22));
+pageInfo[22] = strip({ ...dmTab, dmRole: "active" });
+portMsg[22]({ type: "infoChanged" });
+await new Promise((r) => setTimeout(r, 10));
+const t22b = wsCall.sent.filter((m) => m.type === "tabs").at(-1)?.tabs?.find((t) => t.tabId === 22);
+check("a nudge makes it read the real info from the page itself", t22b?.dmRole === "active", JSON.stringify(t22b));
 
 console.log(fails ? `${fails} FAILED` : "all passed");
 process.exit(fails ? 1 : 0);

@@ -34,8 +34,8 @@
       if (!f) throw new Error(`No scene folder with id '${folderId}'. Use list_scenes to find ids.`);
       return f;
     }
-    const q = String(folderTitle).trim().toLowerCase();
-    const hits = pool.filter((s) => String(s.title || "").trim().toLowerCase() === q);
+    const q = window.AVTT_MCP.nameKey(folderTitle);
+    const hits = pool.filter((s) => window.AVTT_MCP.nameKey(s.title || "") === q);
     if (!hits.length) throw new Error(`No scene folder titled '${folderTitle}'. Create it first with create_folder.`);
     if (hits.length > 1) throw new Error(`${hits.length} folders are titled '${folderTitle}': ${hits.map((h) => `${pathOf(h)} [${h.id}]`).join("; ")}. Use folderId.`);
     return hits[0];

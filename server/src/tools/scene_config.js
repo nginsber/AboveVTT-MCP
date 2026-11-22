@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cleanName } from "../names.js";
 import { errorResult } from "../util.js";
 import { logChange } from "../changelog.js";
 
@@ -72,6 +73,8 @@ export function register(server, bridge) {
     },
     async ({ tabId, ...params }) => {
       try {
+        // the scene title is shown by AboveVTT as HTML: same rules as other names (see names.js)
+        if (typeof params.changes?.title === "string") params.changes = { ...params.changes, title: cleanName(params.changes.title, "Scene title") };
         const r = await bridge.call("update_scene_config", params, { tabId, timeoutMs: 30000 });
         const lines = [`Scene "${r.scene.title}" [${r.scene.id}]`];
         if (!r.saved) lines.push(r.message);

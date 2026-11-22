@@ -5,11 +5,9 @@
   if (window.top !== window) return; // only the top-level campaign page
   if (window.AVTT_MCP) return;       // already loaded
 
-  const FROM_PAGE = "avtt-mcp:page";
-  const TO_PAGE = "avtt-mcp:ext";
+  const FROM_PAGE = "avtt-mcp:page"; // only a bare "infoChanged" nudge goes to relay.js this way
   const handlers = {};
 
-  const send = (payload) => window.postMessage({ channel: FROM_PAGE, payload }, location.origin);
 
   function aboveVttRunning() {
     return typeof window.MB === "object" && window.MB !== null && typeof window.ScenesHandler === "object";
@@ -50,10 +48,20 @@
   // eslint-disable-next-line no-undef
   const folderType = () => (typeof ItemType !== "undefined" ? ItemType.Folder : "folder");
 
+  let identity = { browserId: "", browserName: "" }; // set by background.js through __avttMcpSetIdentity
+  let sealed = false;
+
   const AVTT_MCP = {
-    version: "0.22.0",
-    identity: null, // { browserId, browserName } from background.js
-    register(name, fn) { handlers[name] = fn; },
+    version: "0.25.0",
+    get identity() { return identity; },
+    register(name, fn) {
+      if (sealed) throw new Error("The AboveVTT MCP Bridge is already loaded; no more methods can be added.");
+      handlers[name] = fn;
+    },
+    /** Called by seal.js after every feature file has registered its methods (security review item 2). */
+    seal() { sealed = true; Object.freeze(AVTT_MCP); },
+    /** Tell background.js that this tab's info changed; it then fetches the info itself (see __avttMcpInfo). */
+    nudge() { window.postMessage({ channel: FROM_PAGE, payload: { type: "infoChanged" } }, location.origin); },
     /** Lets one handler reuse another (e.g. create_scene applying update_scene_config). */
     invoke(name, params) {
       const fn = handlers[name];
@@ -63,8 +71,13 @@
     requireDM,
     info,
     folderType,
+    /** How names are compared in lookups: trimmed, any case, and straight / curly quotes treated the same
+     *  (names the MCP writes get curly quotes; see server/src/names.js). */
+    nameKey: (s) => String(s ?? "").normalize("NFC").trim().toLowerCase()
+      .replace(/[\u2018\u2019\u201B\u2032`]/g, "'").replace(/[\u201C\u201D\u201F\u2033]/g, '"'),
   };
-  window.AVTT_MCP = AVTT_MCP;
+  // Fixed in place so no other script on the page can swap it for its own (security review item 2).
+  Object.defineProperty(window, "AVTT_MCP", { value: AVTT_MCP, writable: false, configurable: false, enumerable: false });
 
   // ---- step 1: status ------------------------------------------------------
   AVTT_MCP.register("status", async () => {
@@ -82,40 +95,39 @@
     };
   });
 
-  // ---- message handling ----------------------------------------------------
-  window.addEventListener("message", async (event) => {
-    if (event.source !== window || event.data?.channel !== TO_PAGE) return;
-    const msg = event.data.payload;
-    if (msg?.type === "requestInfo") {
-      send({ type: "info", info: info() });
-      return;
-    }
-    if (msg?.type === "identity") {
-      AVTT_MCP.identity = { browserId: String(msg.browserId || ""), browserName: String(msg.browserName || "") };
-      return;
-    }
-    if (msg?.type !== "call") return;
-    const fn = handlers[msg.method];
+  // ---- how background.js reaches this tab (security review item 2) ----------------------------
+  // Commands, results, tab info and the browser identity no longer travel through window.postMessage, where
+  // any script on the page could send fake commands or fake results. background.js calls these functions
+  // with chrome.scripting.executeScript, so the command goes in and the result comes back through Chrome
+  // itself. They're fixed in place (not writable, not configurable), so no other script can replace them.
+  async function run(method, params) {
+    const fn = handlers[method];
     try {
-      if (!fn) throw new Error(`Unknown method '${msg.method}'. Update the AboveVTT MCP Bridge extension.`);
+      if (!fn) throw new Error(`Unknown method '${method}'. Update the AboveVTT MCP Bridge extension.`);
       const presence = AVTT_MCP.presence;
-      if (presence?.role === "paused" && msg.method !== "take_over_dm" && changesData(msg.method, msg.params)) {
+      if (presence?.role === "paused" && method !== "take_over_dm" && changesData(method, params)) {
         throw new Error(presence.pausedMessage() + " Reading and previews still work here. To make changes, ask to make this tab the " +
           "active DM tab (or click Use here in it), or make them in the active tab.");
       }
-      const result = await fn(msg.params || {});
-      send({ type: "result", id: msg.id, ok: true, result: result ?? null });
+      const result = await fn(params || {});
+      return { ok: true, result: result ?? null };
     } catch (err) {
-      send({ type: "result", id: msg.id, ok: false, error: err?.message || String(err) });
+      return { ok: false, error: err?.message || String(err) };
     }
+  }
+  const lock = (name, fn) => Object.defineProperty(window, name, { value: Object.freeze(fn), writable: false, configurable: false, enumerable: false });
+  lock("__avttMcpRun", run);
+  lock("__avttMcpInfo", () => info());
+  lock("__avttMcpSetIdentity", (id) => {
+    identity = { browserId: String(id?.browserId || "").slice(0, 64), browserName: String(id?.browserName || "").slice(0, 40) };
   });
 
-  // AboveVTT loads after the page; keep reporting until it is up, then less often.
+  // AboveVTT loads after the page: check every 3 s and nudge background.js when something changed.
+  // A nudge carries no data, so a fake one only makes background.js fetch the real info again.
   let last = "";
   const report = () => {
-    const i = info();
-    const key = JSON.stringify(i);
-    if (key !== last) { last = key; send({ type: "info", info: i }); }
+    const key = JSON.stringify(info());
+    if (key !== last) { last = key; AVTT_MCP.nudge(); }
   };
   report();
   setInterval(report, 3000);

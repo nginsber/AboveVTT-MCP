@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nameField } from "../names.js";
 import { errorResult } from "../util.js";
 import { logChange } from "../changelog.js";
 import { guardedCall, previewFooter, confirmTokenField, CONFIRM_STEP } from "../confirm.js";
@@ -97,7 +98,7 @@ export function register(server, bridge) {
       description:
         "Create a note in a journal folder, with text and who can see it (default DM only). Players get shared notes " +
         "through AboveVTT's own sync. Create the folder first with create_note_folder if needed.",
-      inputSchema: { title: z.string(), ...folder, ...content, visibility: visibility.optional(), ...tab },
+      inputSchema: { title: nameField(), ...folder, ...content, visibility: visibility.optional(), ...tab },
     },
     async ({ tabId, ...params }) => {
       try {
@@ -125,7 +126,7 @@ export function register(server, bridge) {
         "dryRun can also preview ordinary replacements.",
       inputSchema: {
         ...which,
-        newTitle: z.string().optional(),
+        newTitle: nameField().optional(),
         ...content,
         mode: z.enum(["replace", "append", "prepend"]).optional().describe("How content is applied (default replace)."),
         replacements: z.array(z.object({
@@ -196,7 +197,7 @@ export function register(server, bridge) {
       title: "Create a journal folder",
       description: "Create a folder in AboveVTT's journal, at the top level or inside another folder, optionally shared with players (everything in a shared folder is visible to them).",
       inputSchema: {
-        title: z.string(),
+        title: nameField(),
         parentFolderId: z.string().optional(),
         parentFolderTitle: z.string().optional(),
         shareWithPlayers: visibility.optional(),
@@ -220,7 +221,7 @@ export function register(server, bridge) {
       description: "Rename a journal folder, move it (into another folder or to the top level), or change whether it's shared with players.",
       inputSchema: {
         ...folder,
-        newTitle: z.string().optional(),
+        newTitle: nameField().optional(),
         shareWithPlayers: visibility.optional(),
         parentFolderId: z.string().optional(),
         parentFolderTitle: z.string().optional(),

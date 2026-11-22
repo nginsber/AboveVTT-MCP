@@ -105,8 +105,8 @@
       return noteId;
     }
     if (noteTitle) {
-      const q = String(noteTitle).trim().toLowerCase();
-      const hits = Object.keys(notes).filter((id) => String(notes[id].title || "").trim().toLowerCase() === q);
+      const q = window.AVTT_MCP.nameKey(noteTitle);
+      const hits = Object.keys(notes).filter((id) => window.AVTT_MCP.nameKey(notes[id].title || "") === q);
       if (!hits.length) throw new Error(`No note titled '${noteTitle}'. Use list_notes (with search) to find it.`);
       if (hits.length > 1) throw new Error(`${hits.length} notes are titled '${noteTitle}': ` + hits.map((h) => `${noteSummary(h).folder ?? noteSummary(h).kind} [${h}]`).join("; ") + ". Use noteId.");
       return hits[0];
@@ -123,8 +123,8 @@
       return c;
     }
     if (folderTitle) {
-      const q = String(folderTitle).trim().toLowerCase();
-      const hits = chapters.filter((x) => String(x.title || "").trim().toLowerCase() === q);
+      const q = window.AVTT_MCP.nameKey(folderTitle);
+      const hits = chapters.filter((x) => window.AVTT_MCP.nameKey(x.title || "") === q);
       if (!hits.length) throw new Error(`No journal folder titled '${folderTitle}'. Create it with create_note_folder, or use list_notes to see folders.`);
       if (hits.length > 1) throw new Error(`${hits.length} journal folders are titled '${folderTitle}': ${hits.map((h) => `${chapterPath(h)} [${h.id}]`).join("; ")}. Use folderId.`);
       return hits[0];
@@ -419,7 +419,7 @@
     if (!t) throw new Error("A folder needs a name.");
     const parent = parentFolderId || parentFolderTitle ? findChapter({ folderId: parentFolderId, folderTitle: parentFolderTitle }) : null;
     const share = parseVisibility(shareWithPlayers) ?? false;
-    const clash = J().chapters.find((c) => (c.parentID || null) === (parent?.id || null) && String(c.title || "").trim().toLowerCase() === t.toLowerCase());
+    const clash = J().chapters.find((c) => (c.parentID || null) === (parent?.id || null) && window.AVTT_MCP.nameKey(c.title || "") === t.toLowerCase());
     if (clash) throw new Error(`A journal folder named '${clash.title}' already exists there [${clash.id}].`);
     const chapter = { id: newId(), title: t, collapsed: false, notes: [] };
     if (parent) chapter.parentID = parent.id;

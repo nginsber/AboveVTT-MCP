@@ -44,8 +44,8 @@
       return hit;
     }
     if (title) {
-      const q = String(title).trim().toLowerCase();
-      const hits = pool.filter((s) => String(s.title || "").trim().toLowerCase() === q);
+      const q = window.AVTT_MCP.nameKey(title);
+      const hits = pool.filter((s) => window.AVTT_MCP.nameKey(s.title || "") === q);
       if (!hits.length) throw new Error(`No ${kind || what} titled '${title}'. Use list_scenes to find it.`);
       if (hits.length > 1) {
         throw new Error(`${hits.length} items are titled '${title}': ` + hits.map((h) => `${pathOf(h)} [${h.id}]`).join("; ") + ". Use the id instead.");
@@ -91,7 +91,7 @@
   function sameNameSibling(parentId, title, exceptId) {
     const q = title.toLowerCase();
     return scenes().find((s) => isFolder(s) && (s.parentId || rootId()) === parentId && s.id !== exceptId &&
-      String(s.title || "").trim().toLowerCase() === q);
+      window.AVTT_MCP.nameKey(s.title || "") === q);
   }
 
   // ---------- create_folder ----------------------------------------------------

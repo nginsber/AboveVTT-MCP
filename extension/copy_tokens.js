@@ -21,7 +21,7 @@
   const newId = () => (typeof uuid === "function" ? uuid() : crypto.randomUUID());
   const clone = (o) => JSON.parse(JSON.stringify(o ?? null));
   const nameOf = (tc) => (typeof tc.name === "function" ? tc.name() : tc.tokenOptions?.name) || "(unnamed)";
-  const lc = (s) => String(s ?? "").trim().toLowerCase();
+  const lc = (s) => window.AVTT_MCP.nameKey(s ?? "");
   // D&D Beyond size ids → squares. AboveVTT places My Tokens by tokenSize and ignores sizeId (a My Token without
   // tokenSize is placed Small/Medium), so the copy must carry tokenSize. Same mapping as Token.js / TokensPanel.js.
   const SQUARES_FOR_SIZE_ID = { 2: 0.5, 5: 2, 6: 3, 7: 4 };

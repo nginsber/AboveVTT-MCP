@@ -18,7 +18,7 @@ for (const fn of ["token_setting_options", "avtt_settings", "scene_setting_optio
 w.eval(grab(TK, "default_options"));
 for (const f of ["page.js", "settings.js"]) w.eval(fs.readFileSync(X + f, "utf8"));
 const out = {}; w.addEventListener("message", (e) => { if (e.data?.payload?.type === "result") out[e.data.payload.id] = e.data.payload; });
-let id = 0; const call = async (method, params) => { const my = ++id; w.dispatchEvent(new w.MessageEvent("message", { data: { channel: "avtt-mcp:ext", payload: { type: "call", id: my, method, params } }, source: w })); for (let t = 0; t < 100 && !out[my]; t++) await new Promise((r) => setTimeout(r, 10)); return out[my]; };
+let id = 0; const call = (method, params) => w.__avttMcpRun(method, params); // the locked entry point background.js uses
 const show = (label, r) => console.log(label.padEnd(28), r.ok ? JSON.stringify(r.result).slice(0, 400) : "ERROR: " + r.error);
 const all = await call("list_settings", {}); if (!all.ok) { console.log("LIST ERROR", all.error); process.exit(1); }
 console.log("counts:", Object.fromEntries(Object.entries(all.result).map(([g, v]) => [g, v.length])));

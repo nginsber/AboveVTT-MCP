@@ -11,7 +11,7 @@ AboveVTT itself is not modified. The connector calls the same functions AboveVTT
 
 See **[INSTALL.md](INSTALL.md)** for setup.
 
-> ⚠️ **Tested only on Windows 11, Google Chrome, Claude desktop for Windows, and AboveVTT 1.61** (the current version as of November 2026). It may work elsewhere, but that hasn't been tried. AboveVTT changes often, and a future AboveVTT update can break some tools until the connector is updated. The `status` tool reports the AboveVTT version it finds.
+> ⚠️ See **[AboveVTT MCP compatibility](COMPATIBILITY.md)** for the Windows and Mac setups it has been tested on. AboveVTT changes often, and a future AboveVTT update can break some tools until the connector is updated. The `status` tool reports the AboveVTT version it finds.
 
 ---
 
@@ -37,7 +37,7 @@ The icon changes within a few seconds of opening or closing a campaign tab, star
 ### Scenes
 - **`list_scenes`**: the scene tree with folders, and which scene you and the players are on.
 - **`get_scene_config` / `update_scene_config`**: read and change the settings in a scene's ⚙ dialog: name, map links, grid (on/off, colour, line width, square size), darkness, weather, vision, snap and more. It saves through AboveVTT's own dialog code, without switching the scene you're on.
-- **`detect_grid`**: reads a scene's map image and finds the grid printed on it (square size, offset, dark or light lines), then sets AboveVTT's manual grid data so the two line up, the job of AboveVTT's Super Mega Wizard. It says so when a map has no printed grid. Needs a one-time "Allow reading map images" click on the extension's options page.
+- **`detect_grid`**: reads a scene's map image and finds the grid printed on it (square size, offset, dark or light lines), then sets AboveVTT's manual grid data so the two line up, the job of AboveVTT's Super Mega Wizard. It says so when a map has no printed grid. Needs a one-time "Allow reading map images" click on the extension's options page, and only reads maps on the internet (not links to your own computer or network).
 - **`create_scene`**: create up to 25 scenes at once, at the top or in a folder, with any of those settings (for example a map link, grid on, 5 ft squares).
 - **`create_folder` / `rename_folder`**: scene folders, including folders inside folders, with colours.
 - **`move_scene`**: move scenes and folders between folders.
@@ -101,6 +101,9 @@ The icon changes within a few seconds of opening or closing a campaign tab, star
 - **Claude asks before anything permanent.** Deletes, imports, resets and the Settings buttons that change data are previewed first (`dryRun`), and Claude has to wait for your "yes" in chat. The server enforces the preview: the real change needs the single-use `confirmToken` from a preview of exactly the same request (valid 10 minutes), and it is refused if what would change is no longer the same as in the preview. AboveVTT's own pop-up confirmations are not used, because they would freeze the connection.
 - **No live-session control.** The connector doesn't switch the players' scene, place tokens on the map, or play, pause or change the volume of music. Those stay with you. It won't edit the playlist that's loaded in the mixer while music is playing. The one exception is `set_fog`: if players are on that scene, they see the fog change at once. By your choice it runs without asking first; the old fog is always saved so it can be restored.
 - **Everything is checked before saving.** Unknown setting names, bad colours, links that aren't http(s), duplicate names and similar mistakes are caught before anything is changed.
+- **Other scripts on the page can't use the bridge.** The extension runs each command in the campaign tab through Chrome's own scripting API, and gets the result back the same way, so other scripts on the D&D Beyond page (ads, analytics, other extensions) can't send it fake commands or feed Claude fake results. The bridge's entry points in the page are locked once it has loaded. (Code running inside the page could still tamper with AboveVTT itself; no extension can prevent that.)
+- **Names can't carry code.** AboveVTT displays many names (scenes, folders, My Tokens, tokens) as raw HTML, so a name like `<img … onerror=…>` would run as code in the page. Names and titles Claude writes may not contain `<` or `>`, and straight quotes become typographic ones (`Bob's` → `Bob’s`). Looking things up by name still works with either kind of quote.
+- **Map reading stays on the internet.** The "Allow reading map images" permission is only used for `detect_grid`, without your cookies, and refuses links to this computer or your local network (`localhost`, `192.168.x.x`, `10.x.x.x`, `.local` names and similar), including a public link that redirects there. So a scene's map link can't be used to reach your router, NAS or other local services.
 - **One DM tab at a time.** If AboveVTT is open as DM in more than one place (another tab, another browser, or another PC), each DM tab running this bridge finds the others, and only the first one is used. Later DM tabs are **paused**: an overlay covers the page so nothing is changed there by accident, and Claude can read but not change anything through them. Switching is never automatic: click **Use here** in the paused tab and confirm (the Yes button waits 2 seconds to avoid accidental clicks), or ask Claude to switch, which also needs a preview and your yes. If the active tab is closed or its PC goes to sleep, the paused tab says so after about a minute, and still waits for you. DM tabs without this bridge can't be detected.
 - **Change log.** Every change is added to `%USERPROFILE%\.abovevtt-mcp\change-log.jsonl`. Ask Claude *"show the change log"*.
 - **Local only.** The server listens on `127.0.0.1` only. It accepts only the Chrome extension, which has to present a secret token stored in `%USERPROFILE%\.abovevtt-mcp\bridge-token.txt`. Only one browser can be connected at a time (the one with the active AboveVTT DM tab). Nothing is sent anywhere else, apart from the small "DM tab here" message each DM tab sends every 30 seconds through AboveVTT's own message channel, so other DM tabs can find it. It holds random IDs, the browser name you chose and the bridge version. Players' browsers receive it too, as with all AboveVTT messages, but AboveVTT ignores it and nothing is shown. Like any connector, what Claude reads from your campaign (notes, stat blocks, scene names) becomes part of your Claude conversation.
@@ -119,8 +122,9 @@ The icon changes within a few seconds of opening or closing a campaign tab, star
 
 ```
 extension/   Chrome extension (manifest v3). page.js + one file per feature run inside the campaign tab.
-             background.js keeps the connection to the server; badge.js decides the toolbar icon; icons/ holds the icons;
-             presence.js finds other DM tabs and pauses all but the active one.
+             background.js keeps the connection to the server; badge.js decides the toolbar icon; netguard.js keeps map downloads off the local network; icons/ holds the icons;
+             presence.js finds other DM tabs and pauses all but the active one; seal.js locks the bridge once
+             loaded. relay.js only reports tabs opening and closing; commands run through chrome.scripting.
 server/      MCP server. src/ is the source, dist/abovevtt-mcp.mjs the bundled file Claude desktop runs.
 test/        jsdom tests that load the real AboveVTT source from a sibling ../AboveVTT folder.
 tools/       make_status_icons.py rebuilds the toolbar icons (needs Python and Pillow).

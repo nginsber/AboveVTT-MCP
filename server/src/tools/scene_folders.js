@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nameField } from "../names.js";
 import { errorResult } from "../util.js";
 import { logChange } from "../changelog.js";
 import { guardedCall, previewFooter, confirmTokenField, CONFIRM_STEP } from "../confirm.js";
@@ -15,7 +16,7 @@ export function register(server, bridge) {
         "Create a folder in AboveVTT's Scenes panel, at the top level or inside another scene folder. " +
         "Names must be unique within the same parent folder and can't contain '/'.",
       inputSchema: {
-        title: z.string().describe("Folder name."),
+        title: nameField().describe("Folder name."),
         parentFolderId: z.string().optional().describe("Put it inside this folder (id from list_scenes)."),
         parentFolderTitle: z.string().optional().describe("Or: exact title of the parent folder."),
         color: z.string().optional().describe("Optional folder colour, e.g. \"#4a90e2\" or \"rgba(74,144,226,1)\"."),
@@ -42,7 +43,7 @@ export function register(server, bridge) {
       inputSchema: {
         folderId: z.string().optional().describe("Folder id from list_scenes."),
         folderTitle: z.string().optional().describe("Or: the folder's exact current title."),
-        newTitle: z.string().optional().describe("New name."),
+        newTitle: nameField().optional().describe("New name."),
         color: z.string().optional().describe("New colour."),
         ...tab,
       },

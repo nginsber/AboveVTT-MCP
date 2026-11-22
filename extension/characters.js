@@ -129,11 +129,11 @@
     let hits;
     if (characterId) hits = list.filter((c) => idOf(c) === String(characterId));
     else if (characterName) {
-      const q = String(characterName).trim().toLowerCase();
-      hits = list.filter((c) => String(c.name || "").trim().toLowerCase() === q);
+      const q = window.AVTT_MCP.nameKey(characterName);
+      hits = list.filter((c) => window.AVTT_MCP.nameKey(c.name || "") === q);
       if (!hits.length) hits = list.filter((c) => String(c.name || "").toLowerCase().includes(q));
     } else if (pName) {
-      const q = String(pName).trim().toLowerCase();
+      const q = window.AVTT_MCP.nameKey(pName);
       hits = list.filter((c) => String(playerName(c) || "").toLowerCase() === q);
     } else throw new Error("Say which character: characterName, characterId or playerName.");
     const names = list.map((c) => `'${c.name}'`).join(", ");

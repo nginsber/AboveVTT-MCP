@@ -1,8 +1,10 @@
 // Runs in the extension's isolated world on the campaign page.
-// Passes messages between page.js (main world, next to AboveVTT) and background.js.
+// Tells background.js when this campaign tab opens or closes (through the port), and passes on page.js's bare
+// "infoChanged" nudge. It no longer carries commands, results or tab info: background.js runs commands and
+// reads tab info itself with chrome.scripting.executeScript, so page scripts can't fake them
+// (security review item 2).
 (() => {
   const FROM_PAGE = "avtt-mcp:page";
-  const TO_PAGE = "avtt-mcp:ext";
   let port = null;
 
   function connect() {
@@ -11,20 +13,15 @@
     } catch {
       return; // extension was reloaded; this page needs a refresh
     }
-    port.onMessage.addListener((payload) => {
-      window.postMessage({ channel: TO_PAGE, payload }, location.origin);
-    });
     port.onDisconnect.addListener(() => {
       port = null;
       setTimeout(connect, 1000); // service worker restarted; reconnect
     });
-    // Ask the page script to introduce itself on every (re)connect.
-    window.postMessage({ channel: TO_PAGE, payload: { type: "requestInfo" } }, location.origin);
   }
 
   window.addEventListener("message", (event) => {
     if (event.source !== window || event.data?.channel !== FROM_PAGE) return;
-    if (port) port.postMessage(event.data.payload);
+    if (event.data.payload?.type === "infoChanged" && port) port.postMessage({ type: "infoChanged" }); // nothing else is passed on
   });
 
   connect();

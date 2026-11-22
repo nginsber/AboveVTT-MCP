@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nameField } from "../names.js";
 import { errorResult } from "../util.js";
 import { logChange } from "../changelog.js";
 import { guardedCall, previewFooter, confirmTokenField, CONFIRM_STEP } from "../confirm.js";
@@ -107,7 +108,7 @@ export function register(server, bridge) {
       "(as fields, plain text or HTML). AboveVTT reads HP, AC and initiative from the stat block every time the token is placed, " +
       "honouring the Max HP Calculation token setting (average/roll/max…). A name already used in that folder gets a number added.",
     inputSchema: {
-      creatures: z.array(z.object({ name: z.string(), images: z.array(z.string()).optional(), ...tokenBits })).min(1).max(25),
+      creatures: z.array(z.object({ name: nameField(), images: z.array(z.string()).optional(), ...tokenBits })).min(1).max(25),
       ...folder,
       ...tab,
     },
@@ -130,7 +131,7 @@ export function register(server, bridge) {
       "current values (that's step 12); new placements use the changes.",
     inputSchema: {
       ...which,
-      newName: z.string().optional(),
+      newName: nameField().optional(),
       images: z.array(z.string()).optional().describe("Replace all images."),
       addImages: z.array(z.string()).optional(),
       removeImages: z.array(z.string()).optional(),
@@ -171,7 +172,7 @@ export function register(server, bridge) {
   server.registerTool("create_creature_folder", {
     title: "Create a My Tokens folder",
     description: "Create a folder in AboveVTT's My Tokens, at the top or inside another My Tokens folder.",
-    inputSchema: { name: z.string(), parentFolderId: z.string().optional(), parentFolderName: z.string().optional(), ...tab },
+    inputSchema: { name: nameField(), parentFolderId: z.string().optional(), parentFolderName: z.string().optional(), ...tab },
   }, async ({ tabId, ...p }) => {
     try {
       const r = await call("create_creature_folder", p, tabId);

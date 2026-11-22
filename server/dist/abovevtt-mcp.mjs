@@ -40832,7 +40832,7 @@ function safeEqual(a, b) {
 }
 
 // src/version.js
-var SERVER_VERSION = "0.22.0";
+var SERVER_VERSION = "0.23.0";
 var TESTED_ABOVEVTT_VERSIONS = ["1.61"];
 
 // src/tools/status.js
@@ -40969,6 +40969,18 @@ __export(scene_config_exports, {
   register: () => register3
 });
 
+// src/names.js
+var NAME_HAS_HTML = /[<>]/;
+var NAME_HTML_MESSAGE = "Names can't contain < or >. AboveVTT shows names as HTML, so these could run as code in the page. Leave them out.";
+function curlyQuotes(s) {
+  return String(s).replace(/(^|[\s([{—–-])"/g, "$1\u201C").replace(/"/g, "\u201D").replace(/(^|[\s([{—–-])'/g, "$1\u2018").replace(/'/g, "\u2019");
+}
+function cleanName(s, what = "Name") {
+  if (NAME_HAS_HTML.test(String(s))) throw new Error(`${what}: ${NAME_HTML_MESSAGE}`);
+  return curlyQuotes(s);
+}
+var nameField = () => external_exports.string().refine((s) => !NAME_HAS_HTML.test(s), { message: NAME_HTML_MESSAGE }).transform(curlyQuotes);
+
 // src/changelog.js
 import fs2 from "node:fs";
 import path2 from "node:path";
@@ -41075,6 +41087,7 @@ function register3(server2, bridge2) {
     },
     async ({ tabId, ...params }) => {
       try {
+        if (typeof params.changes?.title === "string") params.changes = { ...params.changes, title: cleanName(params.changes.title, "Scene title") };
         const r = await bridge2.call("update_scene_config", params, { tabId, timeoutMs: 3e4 });
         const lines = [`Scene "${r.scene.title}" [${r.scene.id}]`];
         if (!r.saved) lines.push(r.message);
@@ -41169,7 +41182,7 @@ function register4(server2, bridge2) {
       title: "Create a scene folder",
       description: "Create a folder in AboveVTT's Scenes panel, at the top level or inside another scene folder. Names must be unique within the same parent folder and can't contain '/'.",
       inputSchema: {
-        title: external_exports.string().describe("Folder name."),
+        title: nameField().describe("Folder name."),
         parentFolderId: external_exports.string().optional().describe("Put it inside this folder (id from list_scenes)."),
         parentFolderTitle: external_exports.string().optional().describe("Or: exact title of the parent folder."),
         color: external_exports.string().optional().describe('Optional folder colour, e.g. "#4a90e2" or "rgba(74,144,226,1)".'),
@@ -41195,7 +41208,7 @@ function register4(server2, bridge2) {
       inputSchema: {
         folderId: external_exports.string().optional().describe("Folder id from list_scenes."),
         folderTitle: external_exports.string().optional().describe("Or: the folder's exact current title."),
-        newTitle: external_exports.string().optional().describe("New name."),
+        newTitle: nameField().optional().describe("New name."),
         color: external_exports.string().optional().describe("New colour."),
         ...tab
       }
@@ -41384,7 +41397,7 @@ function register6(server2, bridge2) {
       inputSchema: {
         scenes: external_exports.array(
           external_exports.object({
-            title: external_exports.string().describe("Scene title."),
+            title: nameField().describe("Scene title."),
             mapUrl: external_exports.string().optional().describe("Public link to the map image or video (can be added later)."),
             config: external_exports.record(external_exports.string(), value).optional().describe("Optional configuration, keys as in get_scene_config.")
           })
@@ -41396,6 +41409,7 @@ function register6(server2, bridge2) {
     },
     async ({ tabId, ...params }) => {
       try {
+        params.scenes = params.scenes.map((s) => typeof s.config?.title === "string" ? { ...s, config: { ...s.config, title: cleanName(s.config.title, "Scene title") } } : s);
         const r = await bridge2.call("create_scene", params, { tabId, timeoutMs: 6e4 });
         const lines = [`Created in ${r.folder}:`];
         for (const c of r.created) {
@@ -41822,7 +41836,7 @@ function register9(server2, bridge2) {
     {
       title: "Create a journal note",
       description: "Create a note in a journal folder, with text and who can see it (default DM only). Players get shared notes through AboveVTT's own sync. Create the folder first with create_note_folder if needed.",
-      inputSchema: { title: external_exports.string(), ...folder, ...content, visibility: visibility.optional(), ...tab5 }
+      inputSchema: { title: nameField(), ...folder, ...content, visibility: visibility.optional(), ...tab5 }
     },
     async ({ tabId, ...params }) => {
       try {
@@ -41842,7 +41856,7 @@ function register9(server2, bridge2) {
       description: `Change a note: rename it, replace/append/prepend text, fix pieces of text with find-and-replace, change who can see it, or move it to another journal folder. Works for journal, scene and token notes. Refuses if the note is open for editing in AboveVTT. For small fixes in a long note, use replacements instead of resending the whole content: each find must appear exactly once in the note (include a few surrounding words if needed), and nothing changes unless every one matches. Plain-text finds match the note's visible text but not text split by formatting (e.g. partly bold); use format "html" for that. Only when the user explicitly asks to replace ALL occurrences (e.g. "Replace all Goblin with Kobold"), set all: true on that pair. Replace-all changes every place the text appears, so it needs a preview: call with dryRun: true, show the user every place (original snippet \u2192 changed snippet) and wait for their explicit yes in chat; ` + CONFIRM_STEP + "dryRun can also preview ordinary replacements.",
       inputSchema: {
         ...which2,
-        newTitle: external_exports.string().optional(),
+        newTitle: nameField().optional(),
         ...content,
         mode: external_exports.enum(["replace", "append", "prepend"]).optional().describe("How content is applied (default replace)."),
         replacements: external_exports.array(external_exports.object({
@@ -41918,7 +41932,7 @@ function register9(server2, bridge2) {
       title: "Create a journal folder",
       description: "Create a folder in AboveVTT's journal, at the top level or inside another folder, optionally shared with players (everything in a shared folder is visible to them).",
       inputSchema: {
-        title: external_exports.string(),
+        title: nameField(),
         parentFolderId: external_exports.string().optional(),
         parentFolderTitle: external_exports.string().optional(),
         shareWithPlayers: visibility.optional(),
@@ -41943,7 +41957,7 @@ function register9(server2, bridge2) {
       description: "Rename a journal folder, move it (into another folder or to the top level), or change whether it's shared with players.",
       inputSchema: {
         ...folder,
-        newTitle: external_exports.string().optional(),
+        newTitle: nameField().optional(),
         shareWithPlayers: visibility.optional(),
         parentFolderId: external_exports.string().optional(),
         parentFolderTitle: external_exports.string().optional(),
@@ -42106,7 +42120,7 @@ ${c.statBlockText}` : "No stat block.");
     title: "Create custom creatures",
     description: "Create one or more custom creatures in AboveVTT's My Tokens (up to 25 per call), at the top level or in a My Tokens folder. Each can have images (public links), token size, border colour, auras, darkvision/light, token settings, and a stat block (as fields, plain text or HTML). AboveVTT reads HP, AC and initiative from the stat block every time the token is placed, honouring the Max HP Calculation token setting (average/roll/max\u2026). A name already used in that folder gets a number added.",
     inputSchema: {
-      creatures: external_exports.array(external_exports.object({ name: external_exports.string(), images: external_exports.array(external_exports.string()).optional(), ...tokenBits })).min(1).max(25),
+      creatures: external_exports.array(external_exports.object({ name: nameField(), images: external_exports.array(external_exports.string()).optional(), ...tokenBits })).min(1).max(25),
       ...folder2,
       ...tab6
     }
@@ -42127,7 +42141,7 @@ ${c.statBlockText}` : "No stat block.");
     description: "Change a custom creature: rename, replace/add/remove images, size, border colour, auras, vision/light, token settings, replace or remove its stat block, or move it to another My Tokens folder. Tokens already placed on maps keep their current values (that's step 12); new placements use the changes.",
     inputSchema: {
       ...which3,
-      newName: external_exports.string().optional(),
+      newName: nameField().optional(),
       images: external_exports.array(external_exports.string()).optional().describe("Replace all images."),
       addImages: external_exports.array(external_exports.string()).optional(),
       removeImages: external_exports.array(external_exports.string()).optional(),
@@ -42169,7 +42183,7 @@ ${c.statBlockText}` : "No stat block.");
   server2.registerTool("create_creature_folder", {
     title: "Create a My Tokens folder",
     description: "Create a folder in AboveVTT's My Tokens, at the top or inside another My Tokens folder.",
-    inputSchema: { name: external_exports.string(), parentFolderId: external_exports.string().optional(), parentFolderName: external_exports.string().optional(), ...tab6 }
+    inputSchema: { name: nameField(), parentFolderId: external_exports.string().optional(), parentFolderName: external_exports.string().optional(), ...tab6 }
   }, async ({ tabId, ...p }) => {
     try {
       const r = await call("create_creature_folder", p, tabId);
@@ -42224,7 +42238,7 @@ var condition = external_exports.union([
   external_exports.string(),
   external_exports.object({
     name: external_exports.string().describe("Condition (e.g. Poisoned), marker (e.g. Blessed, Concentration) or marker colour (red, blue\u2026)."),
-    text: external_exports.string().optional().describe("Label for a coloured marker."),
+    text: nameField().optional().describe("Label for a coloured marker."),
     duration: external_exports.number().optional().describe("Rounds.")
   })
 ]);
@@ -42291,7 +42305,7 @@ function register11(server2, bridge2) {
     inputSchema: {
       ...scene,
       ...which4,
-      name: external_exports.string().optional(),
+      name: nameField().optional(),
       ac: external_exports.number().optional(),
       hp: external_exports.number().optional().describe("Current HP (not counting temp HP)."),
       maxHp: external_exports.number().optional(),
@@ -42339,7 +42353,7 @@ function register11(server2, bridge2) {
       format: external_exports.enum(["text", "html"]).optional(),
       mode: external_exports.enum(["replace", "append", "prepend"]).optional(),
       visibility: external_exports.union([external_exports.string(), external_exports.array(external_exports.string())]).optional(),
-      title: external_exports.string().optional().describe("Defaults to the token's name."),
+      title: nameField().optional().describe("Defaults to the token's name."),
       delete: external_exports.boolean().optional(),
       dryRun: external_exports.boolean().optional(),
       ...tab7
@@ -42407,7 +42421,7 @@ function register12(server2, bridge2) {
     title: "Add tracks to the music library",
     description: "Add up to 50 tracks to AboveVTT's track library by public link (mp3, ogg, wav\u2026 on a web host, Dropbox, etc.), with optional tags. A link already in the library is skipped; a name already used gets a number added. Nothing is played.",
     inputSchema: {
-      tracks: external_exports.array(external_exports.object({ name: external_exports.string(), src: external_exports.string().describe("Public http(s) link to the audio file."), tags: tags.optional() })).min(1).max(50),
+      tracks: external_exports.array(external_exports.object({ name: nameField(), src: external_exports.string().describe("Public http(s) link to the audio file."), tags: tags.optional() })).min(1).max(50),
       ...tab8
     }
   }, async ({ tabId, ...p }) => {
@@ -42427,7 +42441,7 @@ function register12(server2, bridge2) {
   server2.registerTool("update_track", {
     title: "Edit a track in the music library",
     description: "Rename a track, change its link, or set / add / remove tags.",
-    inputSchema: { ...trackWhich, newName: external_exports.string().optional(), src: external_exports.string().optional(), tags: tags.optional().describe("Replace all tags."), addTags: tags.optional(), removeTags: tags.optional(), ...tab8 }
+    inputSchema: { ...trackWhich, newName: nameField().optional(), src: external_exports.string().optional(), tags: tags.optional().describe("Replace all tags."), addTags: tags.optional(), removeTags: tags.optional(), ...tab8 }
   }, async ({ tabId, ...p }) => {
     try {
       const r = await call("update_track", p, tabId);
@@ -42471,7 +42485,7 @@ function register12(server2, bridge2) {
   server2.registerTool("create_playlist", {
     title: "Create a mixer playlist",
     description: "Create a playlist from tracks in the library (by name, id, or everything with a tag). It isn't loaded into the mixer and nothing plays; the DM loads it in the Sounds tab when wanted.",
-    inputSchema: { name: external_exports.string(), tracks: external_exports.array(external_exports.string()).optional().describe("Track names."), trackIds: external_exports.array(external_exports.string()).optional(), tag: external_exports.string().optional(), loop: external_exports.boolean().optional().describe("Loop each track."), ...tab8 }
+    inputSchema: { name: nameField(), tracks: external_exports.array(external_exports.string()).optional().describe("Track names."), trackIds: external_exports.array(external_exports.string()).optional(), tag: external_exports.string().optional(), loop: external_exports.boolean().optional().describe("Loop each track."), ...tab8 }
   }, async ({ tabId, ...p }) => {
     try {
       const r = await call("create_playlist", p, tabId);
@@ -42486,7 +42500,7 @@ ${playlistText(r.created)}`;
   server2.registerTool("update_playlist", {
     title: "Edit a mixer playlist",
     description: "Rename a playlist, add library tracks (by name, id or tag; added paused) or remove tracks. The playlist loaded in the mixer can only have its tracks changed while the mixer is paused.",
-    inputSchema: { ...plWhich, newName: external_exports.string().optional(), addTracks: external_exports.array(external_exports.string()).optional(), addTrackIds: external_exports.array(external_exports.string()).optional(), addTag: external_exports.string().optional(), removeTracks: external_exports.array(external_exports.string()).optional().describe("Track names (or channel ids) to take out."), loop: external_exports.boolean().optional().describe("Loop the added tracks."), ...tab8 }
+    inputSchema: { ...plWhich, newName: nameField().optional(), addTracks: external_exports.array(external_exports.string()).optional(), addTrackIds: external_exports.array(external_exports.string()).optional(), addTag: external_exports.string().optional(), removeTracks: external_exports.array(external_exports.string()).optional().describe("Track names (or channel ids) to take out."), loop: external_exports.boolean().optional().describe("Loop the added tracks."), ...tab8 }
   }, async ({ tabId, ...p }) => {
     try {
       const r = await call("update_playlist", p, tabId);
@@ -42896,7 +42910,7 @@ Player characters, doors/walls and Area of Effect templates can't be copied. A n
         tokenId: external_exports.string().optional().describe("scene: token id from list_scene_tokens."),
         sceneId: external_exports.string().optional(),
         sceneName: external_exports.string().optional(),
-        newName: external_exports.string().optional().describe("Name for the copy (default: the original's name)."),
+        newName: nameField().optional().describe("Name for the copy (default: the original's name)."),
         keepOriginalStats: external_exports.boolean().optional().describe("scene: keep the stat block's AC / max HP instead of the token's.")
       })).min(1).max(25),
       folderId: external_exports.string().optional().describe("My Tokens folder id (default: top level)."),
