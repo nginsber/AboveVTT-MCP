@@ -1308,21 +1308,21 @@ var require_errors = __commonJS({
     function extendErrors({ gen, keyword, schemaValue, data, errsCount, it }) {
       if (errsCount === void 0)
         throw new Error("ajv implementation error");
-      const err = gen.name("err");
+      const err2 = gen.name("err");
       gen.forRange("i", errsCount, names_1.default.errors, (i) => {
-        gen.const(err, (0, codegen_1._)`${names_1.default.vErrors}[${i}]`);
-        gen.if((0, codegen_1._)`${err}.instancePath === undefined`, () => gen.assign((0, codegen_1._)`${err}.instancePath`, (0, codegen_1.strConcat)(names_1.default.instancePath, it.errorPath)));
-        gen.assign((0, codegen_1._)`${err}.schemaPath`, (0, codegen_1.str)`${it.errSchemaPath}/${keyword}`);
+        gen.const(err2, (0, codegen_1._)`${names_1.default.vErrors}[${i}]`);
+        gen.if((0, codegen_1._)`${err2}.instancePath === undefined`, () => gen.assign((0, codegen_1._)`${err2}.instancePath`, (0, codegen_1.strConcat)(names_1.default.instancePath, it.errorPath)));
+        gen.assign((0, codegen_1._)`${err2}.schemaPath`, (0, codegen_1.str)`${it.errSchemaPath}/${keyword}`);
         if (it.opts.verbose) {
-          gen.assign((0, codegen_1._)`${err}.schema`, schemaValue);
-          gen.assign((0, codegen_1._)`${err}.data`, data);
+          gen.assign((0, codegen_1._)`${err2}.schema`, schemaValue);
+          gen.assign((0, codegen_1._)`${err2}.data`, data);
         }
       });
     }
     exports.extendErrors = extendErrors;
     function addError(gen, errObj) {
-      const err = gen.const("err", errObj);
-      gen.if((0, codegen_1._)`${names_1.default.vErrors} === null`, () => gen.assign(names_1.default.vErrors, (0, codegen_1._)`[${err}]`), (0, codegen_1._)`${names_1.default.vErrors}.push(${err})`);
+      const err2 = gen.const("err", errObj);
+      gen.if((0, codegen_1._)`${names_1.default.vErrors} === null`, () => gen.assign(names_1.default.vErrors, (0, codegen_1._)`[${err2}]`), (0, codegen_1._)`${names_1.default.vErrors}.push(${err2})`);
       gen.code((0, codegen_1._)`${names_1.default.errors}++`);
     }
     function returnErrors(it, errs) {
@@ -7656,9 +7656,9 @@ var require_permessage_deflate = __commonJS({
        */
       decompress(data, fin, callback) {
         zlibLimiter.add((done) => {
-          this._decompress(data, fin, (err, result) => {
+          this._decompress(data, fin, (err2, result) => {
             done();
-            callback(err, result);
+            callback(err2, result);
           });
         });
       }
@@ -7672,9 +7672,9 @@ var require_permessage_deflate = __commonJS({
        */
       compress(data, fin, callback) {
         zlibLimiter.add((done) => {
-          this._compress(data, fin, (err, result) => {
+          this._compress(data, fin, (err2, result) => {
             done();
-            callback(err, result);
+            callback(err2, result);
           });
         });
       }
@@ -7705,11 +7705,11 @@ var require_permessage_deflate = __commonJS({
         this._inflate.write(data);
         if (fin) this._inflate.write(TRAILER);
         this._inflate.flush(() => {
-          const err = this._inflate[kError];
-          if (err) {
+          const err2 = this._inflate[kError];
+          if (err2) {
             this._inflate.close();
             this._inflate = null;
-            callback(err);
+            callback(err2);
             return;
           }
           const data2 = bufferUtil.concat(
@@ -7790,14 +7790,14 @@ var require_permessage_deflate = __commonJS({
       this.removeListener("data", inflateOnData);
       this.reset();
     }
-    function inflateOnError(err) {
+    function inflateOnError(err2) {
       this[kPerMessageDeflate]._inflate = null;
       if (this[kError]) {
         this[kCallback](this[kError]);
         return;
       }
-      err[kStatusCode] = 1007;
-      this[kCallback](err);
+      err2[kStatusCode] = 1007;
+      this[kCallback](err2);
     }
   }
 });
@@ -8451,8 +8451,8 @@ var require_receiver = __commonJS({
        */
       decompress(data, cb) {
         const perMessageDeflate = this._extensions[PerMessageDeflate2.extensionName];
-        perMessageDeflate.decompress(data, this._fin, (err, buf) => {
-          if (err) return cb(err);
+        perMessageDeflate.decompress(data, this._fin, (err2, buf) => {
+          if (err2) return cb(err2);
           if (buf.length) {
             this._messageLength += buf.length;
             if (this._messageLength > this._maxPayload && this._maxPayload > 0) {
@@ -8614,13 +8614,13 @@ var require_receiver = __commonJS({
       createError(ErrorCtor, message, prefix, statusCode, errorCode) {
         this._loop = false;
         this._errored = true;
-        const err = new ErrorCtor(
+        const err2 = new ErrorCtor(
           prefix ? `Invalid WebSocket frame: ${message}` : message
         );
-        Error.captureStackTrace(err, this.createError);
-        err.code = errorCode;
-        err[kStatusCode] = statusCode;
-        return err;
+        Error.captureStackTrace(err2, this.createError);
+        err2.code = errorCode;
+        err2[kStatusCode] = statusCode;
+        return err2;
       }
     };
     module.exports = Receiver2;
@@ -9002,10 +9002,10 @@ var require_sender = __commonJS({
         this._state = GET_BLOB_DATA;
         blob.arrayBuffer().then((arrayBuffer) => {
           if (this._socket.destroyed) {
-            const err = new Error(
+            const err2 = new Error(
               "The socket was closed while the blob was being read"
             );
-            process.nextTick(callCallbacks, this, err, cb);
+            process.nextTick(callCallbacks, this, err2, cb);
             return;
           }
           this._bufferedBytes -= options[kByteLength];
@@ -9017,8 +9017,8 @@ var require_sender = __commonJS({
           } else {
             this.dispatch(data, compress, options, cb);
           }
-        }).catch((err) => {
-          process.nextTick(onError, this, err, cb);
+        }).catch((err2) => {
+          process.nextTick(onError, this, err2, cb);
         });
       }
       /**
@@ -9054,10 +9054,10 @@ var require_sender = __commonJS({
         this._state = DEFLATING;
         perMessageDeflate.compress(data, options.fin, (_, buf) => {
           if (this._socket.destroyed) {
-            const err = new Error(
+            const err2 = new Error(
               "The socket was closed while data was being compressed"
             );
-            callCallbacks(this, err, cb);
+            callCallbacks(this, err2, cb);
             return;
           }
           this._bufferedBytes -= options[kByteLength];
@@ -9108,17 +9108,17 @@ var require_sender = __commonJS({
       }
     };
     module.exports = Sender2;
-    function callCallbacks(sender, err, cb) {
-      if (typeof cb === "function") cb(err);
+    function callCallbacks(sender, err2, cb) {
+      if (typeof cb === "function") cb(err2);
       for (let i = 0; i < sender._queue.length; i++) {
         const params = sender._queue[i];
         const callback = params[params.length - 1];
-        if (typeof callback === "function") callback(err);
+        if (typeof callback === "function") callback(err2);
       }
     }
-    function onError(sender, err, cb) {
-      callCallbacks(sender, err, cb);
-      sender.onerror(err);
+    function onError(sender, err2, cb) {
+      callCallbacks(sender, err2, cb);
+      sender.onerror(err2);
     }
   }
 });
@@ -9789,8 +9789,8 @@ var require_websocket = __commonJS({
           }
           return;
         }
-        this._sender.close(code, data, !this._isServer, (err) => {
-          if (err) return;
+        this._sender.close(code, data, !this._isServer, (err2) => {
+          if (err2) return;
           this._closeFrameSent = true;
           if (this._closeFrameReceived || this._receiver._writableState.errorEmitted) {
             this._socket.end();
@@ -10060,11 +10060,11 @@ var require_websocket = __commonJS({
         invalidUrlMessage = "The URL contains a fragment identifier";
       }
       if (invalidUrlMessage) {
-        const err = new SyntaxError(invalidUrlMessage);
+        const err2 = new SyntaxError(invalidUrlMessage);
         if (websocket._redirects === 0) {
-          throw err;
+          throw err2;
         } else {
-          emitErrorAndClose(websocket, err);
+          emitErrorAndClose(websocket, err2);
           return;
         }
       }
@@ -10166,10 +10166,10 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, req, "Opening handshake has timed out");
         });
       }
-      req.on("error", (err) => {
+      req.on("error", (err2) => {
         if (req === null || req[kAborted]) return;
         req = websocket._req = null;
-        emitErrorAndClose(websocket, err);
+        emitErrorAndClose(websocket, err2);
       });
       req.on("response", (res) => {
         const location = res.headers.location;
@@ -10184,8 +10184,8 @@ var require_websocket = __commonJS({
           try {
             addr = new URL2(location, address);
           } catch (e) {
-            const err = new SyntaxError(`Invalid URL: ${location}`);
-            emitErrorAndClose(websocket, err);
+            const err2 = new SyntaxError(`Invalid URL: ${location}`);
+            emitErrorAndClose(websocket, err2);
             return;
           }
           initAsClient(websocket, addr, protocols, options);
@@ -10237,7 +10237,7 @@ var require_websocket = __commonJS({
           let extensions;
           try {
             extensions = parse3(secWebSocketExtensions);
-          } catch (err) {
+          } catch (err2) {
             const message = "Invalid Sec-WebSocket-Extensions header";
             abortHandshake(websocket, socket, message);
             return;
@@ -10250,7 +10250,7 @@ var require_websocket = __commonJS({
           }
           try {
             perMessageDeflate.accept(extensions[PerMessageDeflate2.extensionName]);
-          } catch (err) {
+          } catch (err2) {
             const message = "Invalid Sec-WebSocket-Extensions header";
             abortHandshake(websocket, socket, message);
             return;
@@ -10273,10 +10273,10 @@ var require_websocket = __commonJS({
       }
       return opts;
     }
-    function emitErrorAndClose(websocket, err) {
+    function emitErrorAndClose(websocket, err2) {
       websocket._readyState = WebSocket2.CLOSING;
       websocket._errorEmitted = true;
-      websocket.emit("error", err);
+      websocket.emit("error", err2);
       websocket.emitClose();
     }
     function netConnect(options) {
@@ -10292,17 +10292,17 @@ var require_websocket = __commonJS({
     }
     function abortHandshake(websocket, stream, message) {
       websocket._readyState = WebSocket2.CLOSING;
-      const err = new Error(message);
-      Error.captureStackTrace(err, abortHandshake);
+      const err2 = new Error(message);
+      Error.captureStackTrace(err2, abortHandshake);
       if (stream.setHeader) {
         stream[kAborted] = true;
         stream.abort();
         if (stream.socket && !stream.socket.destroyed) {
           stream.socket.destroy();
         }
-        process.nextTick(emitErrorAndClose, websocket, err);
+        process.nextTick(emitErrorAndClose, websocket, err2);
       } else {
-        stream.destroy(err);
+        stream.destroy(err2);
         stream.once("error", websocket.emit.bind(websocket, "error"));
         stream.once("close", websocket.emitClose.bind(websocket));
       }
@@ -10314,10 +10314,10 @@ var require_websocket = __commonJS({
         else websocket._bufferedAmount += length;
       }
       if (cb) {
-        const err = new Error(
+        const err2 = new Error(
           `WebSocket is not open: readyState ${websocket.readyState} (${readyStates[websocket.readyState]})`
         );
-        process.nextTick(cb, err);
+        process.nextTick(cb, err2);
       }
     }
     function receiverOnConclude(code, reason) {
@@ -10340,16 +10340,16 @@ var require_websocket = __commonJS({
       const websocket = this[kWebSocket];
       if (!websocket.isPaused) websocket._socket.resume();
     }
-    function receiverOnError(err) {
+    function receiverOnError(err2) {
       const websocket = this[kWebSocket];
       if (websocket._socket[kWebSocket] !== void 0) {
         websocket._socket.removeListener("data", socketOnData);
         process.nextTick(resume, websocket._socket);
-        websocket.close(err[kStatusCode]);
+        websocket.close(err2[kStatusCode]);
       }
       if (!websocket._errorEmitted) {
         websocket._errorEmitted = true;
-        websocket.emit("error", err);
+        websocket.emit("error", err2);
       }
     }
     function receiverOnFinish() {
@@ -10379,7 +10379,7 @@ var require_websocket = __commonJS({
     function resume(stream) {
       stream.resume();
     }
-    function senderOnError(err) {
+    function senderOnError(err2) {
       const websocket = this[kWebSocket];
       if (websocket.readyState === WebSocket2.CLOSED) return;
       if (websocket.readyState === WebSocket2.OPEN) {
@@ -10389,7 +10389,7 @@ var require_websocket = __commonJS({
       this._socket.end();
       if (!websocket._errorEmitted) {
         websocket._errorEmitted = true;
-        websocket.emit("error", err);
+        websocket.emit("error", err2);
       }
     }
     function setCloseTimer(websocket) {
@@ -10455,11 +10455,11 @@ var require_stream = __commonJS({
         this.destroy();
       }
     }
-    function duplexOnError(err) {
+    function duplexOnError(err2) {
       this.removeListener("error", duplexOnError);
       this.destroy();
       if (this.listenerCount("error") === 0) {
-        this.emit("error", err);
+        this.emit("error", err2);
       }
     }
     function createWebSocketStream2(ws, options) {
@@ -10475,28 +10475,28 @@ var require_stream = __commonJS({
         const data = !isBinary && duplex._readableState.objectMode ? msg.toString() : msg;
         if (!duplex.push(data)) ws.pause();
       });
-      ws.once("error", function error62(err) {
+      ws.once("error", function error62(err2) {
         if (duplex.destroyed) return;
         terminateOnDestroy = false;
-        duplex.destroy(err);
+        duplex.destroy(err2);
       });
       ws.once("close", function close() {
         if (duplex.destroyed) return;
         duplex.push(null);
       });
-      duplex._destroy = function(err, callback) {
+      duplex._destroy = function(err2, callback) {
         if (ws.readyState === ws.CLOSED) {
-          callback(err);
+          callback(err2);
           process.nextTick(emitClose, duplex);
           return;
         }
         let called = false;
-        ws.once("error", function error62(err2) {
+        ws.once("error", function error62(err3) {
           called = true;
-          callback(err2);
+          callback(err3);
         });
         ws.once("close", function close() {
-          if (!called) callback(err);
+          if (!called) callback(err2);
           process.nextTick(emitClose, duplex);
         });
         if (terminateOnDestroy) ws.terminate();
@@ -10827,7 +10827,7 @@ var require_websocket_server = __commonJS({
         if (secWebSocketProtocol !== void 0) {
           try {
             protocols = subprotocol2.parse(secWebSocketProtocol);
-          } catch (err) {
+          } catch (err2) {
             const message = "Invalid Sec-WebSocket-Protocol header";
             abortHandshakeOrEmitwsClientError(this, req, socket, 400, message);
             return;
@@ -10847,7 +10847,7 @@ var require_websocket_server = __commonJS({
               perMessageDeflate.accept(offers[PerMessageDeflate2.extensionName]);
               extensions[PerMessageDeflate2.extensionName] = perMessageDeflate;
             }
-          } catch (err) {
+          } catch (err2) {
             const message = "Invalid or unacceptable Sec-WebSocket-Extensions header";
             abortHandshakeOrEmitwsClientError(this, req, socket, 400, message);
             return;
@@ -10978,9 +10978,9 @@ var require_websocket_server = __commonJS({
     }
     function abortHandshakeOrEmitwsClientError(server2, req, socket, code, message, headers) {
       if (server2.listenerCount("wsClientError")) {
-        const err = new Error(message);
-        Error.captureStackTrace(err, abortHandshakeOrEmitwsClientError);
-        server2.emit("wsClientError", err, socket, req);
+        const err2 = new Error(message);
+        Error.captureStackTrace(err2, abortHandshakeOrEmitwsClientError);
+        server2.emit("wsClientError", err2, socket, req);
       } else {
         abortHandshake(socket, code, message, headers);
       }
@@ -11621,8 +11621,8 @@ var ZodType = class {
         } : {
           issues: ctx.common.issues
         };
-      } catch (err) {
-        if (err?.message?.toLowerCase()?.includes("encountered")) {
+      } catch (err2) {
+        if (err2?.message?.toLowerCase()?.includes("encountered")) {
           this["~standard"].async = true;
         }
         ctx.common = {
@@ -16020,10 +16020,10 @@ function defineLazyInternal(inst, key, compute) {
           Object.defineProperty(this, key, { configurable: true, writable: true, value: value2 });
         broke = broke || outer;
         return value2;
-      } catch (err) {
+      } catch (err2) {
         delete this[key];
         broke = broke || outer;
-        throw err;
+        throw err2;
       }
     },
     set(value2) {
@@ -27591,9 +27591,9 @@ function compile(schema, options) {
     const clone2 = withParser(schema, parser);
     clone2._zod.bag.validator = compileValidator(schema, parser);
     return clone2;
-  } catch (err) {
+  } catch (err2) {
     if (options?.strict)
-      throw err;
+      throw err2;
     return schema;
   }
 }
@@ -27683,8 +27683,8 @@ ${code}
   try {
     const factory = new F(...constantNames, factoryCode);
     fn = factory(...constantValues);
-  } catch (err) {
-    throw new ZodCompileUnsupportedError(`this schema (generated code failed to evaluate: ${err.message})`);
+  } catch (err2) {
+    throw new ZodCompileUnsupportedError(`this schema (generated code failed to evaluate: ${err2.message})`);
   }
   if (options?.debug) {
     fn.code = fullCode;
@@ -27722,9 +27722,9 @@ function compileChild(doc, ctx, schema, accessor, needsValue = true) {
   const varCounter = ctx.varCounter;
   try {
     return generateCheck(doc, ctx, schema, accessor, needsValue);
-  } catch (err) {
-    if (!(err instanceof ZodCompileUnsupportedError) || !err.islandable)
-      throw err;
+  } catch (err2) {
+    if (!(err2 instanceof ZodCompileUnsupportedError) || !err2.islandable)
+      throw err2;
     doc.content.length = contentLen;
     if (ctx.constants.size > constantCount) {
       const trailing = Array.from(ctx.constants.keys()).slice(constantCount);
@@ -40404,6 +40404,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 var log = (...args) => console.error("[abovevtt-mcp]", ...args);
+var KEEPALIVE_MS = Number(process.env.AVTT_KEEPALIVE_MS) || 2e4;
+var hasDMTab = (tabs) => Array.isArray(tabs) && tabs.some((t) => t && t.aboveVttRunning && t.isDM && t.dmRole !== "paused");
 var CONFIG_DIR = path.join(os.homedir(), ".abovevtt-mcp");
 var TOKEN_FILE = path.join(CONFIG_DIR, "bridge-token.txt");
 var POSIX = process.platform !== "win32";
@@ -40414,8 +40416,8 @@ function ensureConfigDir() {
 function tightenMode(p, mode) {
   try {
     if ((fs.statSync(p).mode & 63) !== 0) fs.chmodSync(p, mode);
-  } catch (err) {
-    log(`could not restrict permissions on ${p}: ${err.message}`);
+  } catch (err2) {
+    log(`could not restrict permissions on ${p}: ${err2.message}`);
   }
 }
 function readToken() {
@@ -40439,8 +40441,8 @@ function loadOrCreateToken() {
   try {
     fs.writeFileSync(TOKEN_FILE, token2 + "\n", { encoding: "utf8", mode: 384, flag: "wx" });
     return token2;
-  } catch (err) {
-    if (err.code !== "EEXIST") throw err;
+  } catch (err2) {
+    if (err2.code !== "EEXIST") throw err2;
   }
   for (let i = 0; i < 20; i++) {
     sleepSync(50);
@@ -40465,6 +40467,7 @@ var Bridge = class {
     this.role = "starting";
     this.extensionInfo = null;
     this.tabs = [];
+    this.turnedAway = null;
     this.pending = /* @__PURE__ */ new Map();
     this.nextId = 1;
     this.wss = null;
@@ -40483,8 +40486,14 @@ var Bridge = class {
   start() {
     this.#listen();
     this.keepAlive = setInterval(() => {
-      if (this.socket?.readyState === 1) this.socket.send(JSON.stringify({ type: "ping", t: Date.now() }));
-    }, 2e4);
+      if (this.socket?.readyState === 1) {
+        this.socket.send(JSON.stringify({ type: "ping", t: Date.now() }));
+        try {
+          this.socket.ping();
+        } catch {
+        }
+      }
+    }, KEEPALIVE_MS);
   }
   stop() {
     this.stopped = true;
@@ -40521,23 +40530,23 @@ var Bridge = class {
       this.peerError = null;
       log(`bridge listening on ws://127.0.0.1:${this.port} (primary, pid ${this.pid})`);
     });
-    wss.on("error", (err) => {
+    wss.on("error", (err2) => {
       if (this.wss !== wss) {
         try {
           wss.close();
         } catch {
         }
-        if (err.code === "EADDRINUSE") {
+        if (err2.code === "EADDRINUSE") {
           this.#connectAsPeer();
         } else {
           this.role = "starting";
-          this.listenError = err;
-          log(`bridge could not listen on port ${this.port}: ${err.message}`);
+          this.listenError = err2;
+          log(`bridge could not listen on port ${this.port}: ${err2.message}`);
           this.#retryLater(5e3);
         }
         return;
       }
-      log(`bridge server error: ${err.message}`);
+      log(`bridge server error: ${err2.message}`);
     });
     wss.on("connection", (ws, req) => this.#onConnection(ws, req));
   }
@@ -40568,12 +40577,38 @@ var Bridge = class {
       if (!kind) {
         const tokenOk = typeof msg.token === "string" && safeEqual(msg.token, this.token);
         if (fromExtension && msg.type === "hello" && tokenOk) {
-          kind = "extension";
           clearTimeout(authTimer);
-          if (this.socket && this.socket !== ws) this.socket.close(4e3, "replaced by newer connection");
+          const newcomer = {
+            browserId: typeof msg.browserId === "string" ? msg.browserId : null,
+            browserName: typeof msg.browserName === "string" ? msg.browserName.slice(0, 40) : "",
+            tabs: Array.isArray(msg.tabs) ? msg.tabs : []
+          };
+          const decision = this.#chooseBrowser(newcomer);
+          if (decision === "refuse") {
+            const cur = this.extensionInfo || {};
+            this.turnedAway = { browserId: newcomer.browserId, browserName: newcomer.browserName, hasDMTab: hasDMTab(newcomer.tabs), at: (/* @__PURE__ */ new Date()).toISOString() };
+            ws.close(4002, JSON.stringify({ other: cur.browserName || "", otherHasDMTab: hasDMTab(this.tabs) }).slice(0, 120));
+            log(`refused a second browser (${newcomer.browserName || "unnamed"}); keeping ${cur.browserName || "the connected one"}`);
+            this.#broadcastState();
+            return;
+          }
+          kind = "extension";
+          if (this.socket && this.socket !== ws) {
+            const why = decision === "same-browser" ? "same browser reconnected" : decision === "has-dm-tab" ? "replaced by a browser with an AboveVTT DM tab" : "replaced (the old connection stopped answering)";
+            this.socket.close(4e3, why);
+            if (decision === "has-dm-tab") {
+              const old = this.extensionInfo || {};
+              this.turnedAway = { browserId: old.browserId ?? null, browserName: old.browserName || "", hasDMTab: false, at: (/* @__PURE__ */ new Date()).toISOString() };
+            }
+          }
+          if (this.turnedAway && this.turnedAway.browserId && this.turnedAway.browserId === newcomer.browserId) this.turnedAway = null;
           this.socket = ws;
-          this.extensionInfo = { extVersion: msg.extVersion, connectedAt: (/* @__PURE__ */ new Date()).toISOString() };
-          this.tabs = Array.isArray(msg.tabs) ? msg.tabs : [];
+          ws.lastSeen = Date.now();
+          ws.on("pong", () => {
+            ws.lastSeen = Date.now();
+          });
+          this.extensionInfo = { extVersion: msg.extVersion, connectedAt: (/* @__PURE__ */ new Date()).toISOString(), browserId: newcomer.browserId, browserName: newcomer.browserName };
+          this.tabs = newcomer.tabs;
           ws.send(JSON.stringify({ type: "welcome" }));
           log(`extension connected (v${msg.extVersion})`);
           this.#broadcastState();
@@ -40593,6 +40628,7 @@ var Bridge = class {
         if (msg.type === "call") this.#servePeerCall(ws, msg);
         return;
       }
+      ws.lastSeen = Date.now();
       if (msg.type === "tabs") {
         this.tabs = Array.isArray(msg.tabs) ? msg.tabs : [];
         this.#broadcastState();
@@ -40619,7 +40655,20 @@ var Bridge = class {
     const reply = (body) => {
       if (ws.readyState === 1) ws.send(JSON.stringify({ type: "result", id: msg.id, ...body }));
     };
-    this.call(msg.method, msg.params, { tabId: msg.tabId, timeoutMs: msg.timeoutMs }).then((result) => reply({ ok: true, result })).catch((err) => reply({ ok: false, error: err.message }));
+    this.call(msg.method, msg.params, { tabId: msg.tabId, timeoutMs: msg.timeoutMs }).then((result) => reply({ ok: true, result })).catch((err2) => reply({ ok: false, error: err2.message }));
+  }
+  /** Is the connected browser still answering? (pongs or messages within the last ~2 keepalives) */
+  #isAlive(ws) {
+    return !!ws && ws.readyState === 1 && Date.now() - (ws.lastSeen || 0) < 2.25 * KEEPALIVE_MS;
+  }
+  /** A browser wants to connect while one may already be: "accept" | "same-browser" | "has-dm-tab" | "stale" | "refuse". */
+  #chooseBrowser(newcomer) {
+    const cur = this.socket;
+    if (!cur || cur.readyState !== 1) return "accept";
+    if (newcomer.browserId && newcomer.browserId === this.extensionInfo?.browserId) return "same-browser";
+    if (!this.#isAlive(cur)) return "stale";
+    if (hasDMTab(newcomer.tabs) && !hasDMTab(this.tabs)) return "has-dm-tab";
+    return "refuse";
   }
   #selfInfo() {
     return { pid: this.pid, version: this.version, startedAt: this.startedAt };
@@ -40628,7 +40677,8 @@ var Bridge = class {
     const connected = this.socket?.readyState === 1;
     return {
       extension: connected ? { connected: true, ...this.extensionInfo } : { connected: false },
-      tabs: this.tabs
+      tabs: this.tabs,
+      turnedAway: this.turnedAway
     };
   }
   #broadcastState() {
@@ -40671,8 +40721,8 @@ var Bridge = class {
         this.#settle(msg);
       }
     });
-    up.on("error", (err) => {
-      this.peerError = err.message;
+    up.on("error", (err2) => {
+      this.peerError = err2.message;
     });
     up.on("close", (code) => {
       if (this.upstream !== up) return;
@@ -40704,6 +40754,7 @@ var Bridge = class {
     this.extensionInfo = this.remoteExtensionConnected ? { ...state.extension } : null;
     if (this.extensionInfo) delete this.extensionInfo.connected;
     this.tabs = Array.isArray(state?.tabs) ? state.tabs : [];
+    this.turnedAway = state?.turnedAway ?? null;
   }
   // ---------- calls ------------------------------------------------------------
   get connected() {
@@ -40781,7 +40832,7 @@ function safeEqual(a, b) {
 }
 
 // src/version.js
-var SERVER_VERSION = "0.19.1";
+var SERVER_VERSION = "0.22.0";
 var TESTED_ABOVEVTT_VERSIONS = ["1.61"];
 
 // src/tools/status.js
@@ -40819,6 +40870,7 @@ function register(server2, bridge2) {
         },
         extension: bridge2.connected ? { connected: true, ...bridge2.extensionInfo } : { connected: false },
         tabs: bridge2.tabs,
+        ...bridge2.turnedAway ? { otherBrowser: bridge2.turnedAway } : {},
         testedAboveVttVersions: TESTED_ABOVEVTT_VERSIONS
       };
       if (bridge2.connected && bridge2.tabs.length > 0) {
@@ -40828,8 +40880,8 @@ function register(server2, bridge2) {
           if (v && !TESTED_ABOVEVTT_VERSIONS.some((t) => String(v).startsWith(t))) {
             report.warning = `AboveVTT ${v} has not been tested with this connector; some tools may fail.`;
           }
-        } catch (err) {
-          report.activeTabError = err.message;
+        } catch (err2) {
+          report.activeTabError = err2.message;
         }
       }
       const primaryVersion = report.server.primary?.version;
@@ -40842,6 +40894,16 @@ function register(server2, bridge2) {
   );
 }
 function summarize(r) {
+  const base = summarizeConnection(r);
+  const o = r.otherBrowser;
+  if (o && Date.now() - Date.parse(o.at) < 9e4) {
+    const other = o.browserName ? `'${o.browserName}'` : "Another browser";
+    const here = r.extension?.browserName ? `'${r.extension.browserName}'` : "this browser";
+    return `${base} Note: ${other} also has the AboveVTT MCP Bridge${o.hasDMTab ? " and an AboveVTT DM tab" : ""}, but only one browser can be connected; ${here} is the one in use.`;
+  }
+  return base;
+}
+function summarizeConnection(r) {
   const s = r.server;
   if (s.role === "starting") return "Bridge is not running: " + (s.listenError || "still starting");
   if (s.role === "peer" && !s.primary) return "Port in use; could not join the copy that holds it: " + s.peerError;
@@ -40851,7 +40913,12 @@ function summarize(r) {
   if (!t) return "Extension connected; could not read the AboveVTT tab.";
   if (!t.aboveVttRunning) return "Campaign tab is open, but AboveVTT is not running in it yet.";
   if (!t.isDM) return "AboveVTT is running, but not as the DM. Open the campaign as DM.";
-  return `Ready: DM in "${t.campaignName ?? t.gameId}", AboveVTT ${t.aboveVttVersion}, scene "${t.currentScene ?? "none"}".`;
+  const d = t.dmTabs;
+  if (d?.role === "paused") {
+    return `Paused: AboveVTT is open as DM in "${t.campaignName ?? t.gameId}" here, but ${d.active ? `${d.active.where} is the active DM tab` : "the active DM tab hasn't been heard from for over a minute"}. Reading works; changes are refused. To use this tab, click Use here in it, or ask to switch the active DM tab.`;
+  }
+  const others = d?.otherDMTabs?.length ? ` Also open as DM elsewhere (paused): ${d.otherDMTabs.map((o) => o.where).join(", ")}.` : "";
+  return `Ready: DM in "${t.campaignName ?? t.gameId}", AboveVTT ${t.aboveVttVersion}, scene "${t.currentScene ?? "none"}".${others}`;
 }
 
 // src/tools/scenes.js
@@ -40889,8 +40956,8 @@ function register2(server2, bridge2) {
             { type: "text", text: JSON.stringify({ dmSceneId: r.dmSceneId, playerSceneId: r.playerSceneId, tree: r.tree }) }
           ]
         };
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -40914,18 +40981,18 @@ function logChange(bridge2, { tool, params, summary }) {
       if (fs2.statSync(CHANGE_LOG_FILE).size > MAX_BYTES) fs2.renameSync(CHANGE_LOG_FILE, CHANGE_LOG_FILE + ".old");
     } catch {
     }
-    const tab13 = (bridge2?.tabs || []).find((t) => t.isDM) || bridge2?.tabs?.[0];
+    const tab14 = (bridge2?.tabs || []).find((t) => t.isDM) || bridge2?.tabs?.[0];
     const { tabId, confirmToken, dryRun, ...rest } = params || {};
     const entry = {
       time: (/* @__PURE__ */ new Date()).toISOString(),
       tool,
-      campaign: tab13?.campaignName ?? tab13?.gameId ?? null,
+      campaign: tab14?.campaignName ?? tab14?.gameId ?? null,
       params: rest,
       summary
     };
     fs2.appendFileSync(CHANGE_LOG_FILE, JSON.stringify(entry) + "\n", "utf8");
-  } catch (err) {
-    console.error("[abovevtt-mcp] could not write change log:", err.message);
+  } catch (err2) {
+    console.error("[abovevtt-mcp] could not write change log:", err2.message);
   }
 }
 function readChanges({ limit = 20, tool, search } = {}) {
@@ -40991,8 +41058,8 @@ function register3(server2, bridge2) {
       try {
         const r = await bridge2.call("get_scene_config", params, { tabId });
         return { content: [{ type: "text", text: renderConfig(r) }, { type: "text", text: JSON.stringify(r) }] };
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41017,8 +41084,8 @@ function register3(server2, bridge2) {
         }
         if (r.saved) logChange(bridge2, { tool: "update_scene_config", params, summary: lines.join("\n") });
         return { content: [{ type: "text", text: lines.join("\n") }] };
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41115,8 +41182,8 @@ function register4(server2, bridge2) {
         const text = `Created folder ${r.created.path} [${r.created.id}]`;
         logChange(bridge2, { tool: "create_folder", params, summary: text });
         return ok(text);
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41141,8 +41208,8 @@ function register4(server2, bridge2) {
         if (params.color !== void 0) lines.push(`Colour: ${r.color}`);
         logChange(bridge2, { tool: "rename_folder", params, summary: lines.join("\n") });
         return ok(lines.join("\n"));
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41167,8 +41234,8 @@ function register4(server2, bridge2) {
         for (const u of r.unchanged) lines.push(`\u2022 '${u.title}' was already there.`);
         if (r.moved.length) logChange(bridge2, { tool: "move_scene", params, summary: lines.join("\n") });
         return ok(lines.join("\n"));
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41194,8 +41261,8 @@ function register4(server2, bridge2) {
         for (const s of list2) lines.push(`\u2022 ${s.path}${s.alsoDeletesSceneNote ? "  (and its scene note)" : ""}`);
         if (!r.dryRun) logChange(bridge2, { tool: "delete_scene", params, summary: lines.join("\n") });
         return ok(lines.join("\n") + previewFooter(r));
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41232,8 +41299,8 @@ function register4(server2, bridge2) {
         }
         if (!r.dryRun) logChange(bridge2, { tool: "delete_folder", params, summary: lines.join("\n") });
         return ok(lines.join("\n") + previewFooter(r));
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41269,8 +41336,8 @@ function register5(server2, bridge2) {
         ].join("\n");
         logChange(bridge2, { tool: "export_backup", params: {}, summary: `Downloaded ${r.filename}` });
         return { content: [{ type: "text", text }] };
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41345,8 +41412,8 @@ function register6(server2, bridge2) {
         }
         logChange(bridge2, { tool: "create_scene", params, summary: lines.join("\n") });
         return { content: [{ type: "text", text: lines.join("\n") }] };
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41417,8 +41484,8 @@ function register7(server2, bridge2) {
       try {
         const r = await bridge2.call("list_settings", params, { tabId });
         return { content: [{ type: "text", text: render(r) }, { type: "text", text: JSON.stringify(r) }] };
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41442,8 +41509,8 @@ function register7(server2, bridge2) {
         for (const n of r.notes) lines.push(`\u26A0 ${n}`);
         if (r.changed.length) logChange(bridge2, { tool: "set_setting", params, summary: lines.join("\n") });
         return { content: [{ type: "text", text: lines.join("\n") }] };
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41469,8 +41536,8 @@ function register7(server2, bridge2) {
         for (const c of r.reset) lines.push(`\u2022 ${c.key}: ${fmt3(c.from)} \u2192 ${fmt3(c.to)} (default)`);
         if (!r.dryRun && r.reset.length) logChange(bridge2, { tool: "reset_setting", params, summary: lines.join("\n") });
         return { content: [{ type: "text", text: lines.join("\n") + (r.reset.length ? previewFooter(r) : "") }] };
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41577,8 +41644,8 @@ function register8(server2, bridge2) {
 ${renderPreview(r.preview)}${tail}`;
         if (!r.dryRun) logChange(bridge2, { tool: "import_backup", params: { file: full }, summary: text });
         return { content: [{ type: "text", text: text + previewFooter(r) }] };
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41653,8 +41720,8 @@ ${renderPreview(r.preview)}${tail}`;
         const changedSomething = !r.dryRun && !r.needsInviteId && r.found !== 0;
         if (changedSomething) logChange(bridge2, { tool: "run_settings_action", params: { action: params.action }, summary: text });
         return { content: [{ type: "text", text: text + previewFooter(r) }] };
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41728,8 +41795,8 @@ function register9(server2, bridge2) {
           r.notes.forEach((n) => lines.push(noteLine(n, "  ") + (r.kind === "all" ? ` (${n.kind})` : "")));
         }
         return ok2(lines.join("\n"));
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41745,8 +41812,8 @@ function register9(server2, bridge2) {
       try {
         const r = await call("get_note", params, tabId);
         return ok2([`${r.title} [${r.id}]`, `Folder: ${r.folder ?? `(${r.kind} note)`} \u2014 visible to: ${r.visibility}${r.sharedThroughFolder ? ` (shared via folder '${r.sharedThroughFolder}')` : ""}`, "", r.content || "(empty)"].join("\n"));
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41763,8 +41830,8 @@ function register9(server2, bridge2) {
         const text = `Created ${noteLine(r.created).trim()} in ${r.created.folder}.`;
         changed("create_note", { ...params, content: params.content ? `${params.content.length} chars` : void 0 }, text);
         return ok2(text);
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41820,8 +41887,8 @@ function register9(server2, bridge2) {
         const text = lines.join("\n");
         changed("update_note", { ...params, content: params.content ? `${params.content.length} chars` : void 0 }, text);
         return ok2(text);
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41840,8 +41907,8 @@ function register9(server2, bridge2) {
         const text = `${r.dryRun ? "Would delete (nothing changed yet)" : "Deleted"}: ${noteLine(s).trim()}${s.folder ? ` in ${s.folder}` : ` (${s.kind} note)`}, ${s.length} characters.`;
         if (!r.dryRun) changed("delete_note", params, text);
         return ok2(text + previewFooter(r));
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41864,8 +41931,8 @@ function register9(server2, bridge2) {
         const text = `Created journal folder ${r.created.path} [${r.created.id}] \u2014 shared with: ${r.created.sharedWithPlayers === "DM only" ? "nobody (DM only)" : r.created.sharedWithPlayers}.`;
         changed("create_note_folder", params, text);
         return ok2(text);
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41894,8 +41961,8 @@ function register9(server2, bridge2) {
         const text = lines.join("\n");
         changed("update_note_folder", params, text);
         return ok2(text);
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -41916,8 +41983,8 @@ function register9(server2, bridge2) {
         const text = lines.join("\n");
         if (!r.dryRun) changed("delete_note_folder", params, text);
         return ok2(text + previewFooter(r));
-      } catch (err) {
-        return errorResult(err.message);
+      } catch (err2) {
+        return errorResult(err2.message);
       }
     }
   );
@@ -42760,8 +42827,8 @@ function register15(server2, bridge2) {
       try {
         const file2 = saveBackup(bridge2, r);
         lines.push(`Previous fog saved (restore with set_fog action "restore"): fog-backups\\\u2026\\${file2}`);
-      } catch (err) {
-        lines.push(`\u26A0 Couldn't save a copy of the previous fog (${err.message}), so this change can't be restored.`);
+      } catch (err2) {
+        lines.push(`\u26A0 Couldn't save a copy of the previous fog (${err2.message}), so this change can't be restored.`);
       }
       lines.push(r.verified ? "Checked: saved on the scene." : "NOT verified: AboveVTT didn't show the change on reading the scene back. Check the map.");
       logChange(bridge2, { tool: "set_fog", params: { ...p, action, backup, tabId }, summary: lines.join("\n") });
@@ -42854,6 +42921,77 @@ Player characters, doors/walls and Area of Effect templates can't be copied. A n
   });
 }
 
+// src/tools/dm_tabs.js
+var dm_tabs_exports = {};
+__export(dm_tabs_exports, {
+  register: () => register17
+});
+var tab13 = { tabId: external_exports.number().int().optional().describe("Only needed if several AboveVTT tabs are open.") };
+var ok10 = (text) => ({ content: [{ type: "text", text }] });
+var err = (text) => ({ content: [{ type: "text", text }], isError: true });
+var ago = (ms) => {
+  const s = Math.max(0, Math.round((Date.now() - ms) / 1e3));
+  return s < 90 ? `${s} s ago` : `${Math.round(s / 60)} min ago`;
+};
+var at = (ms) => ms ? new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "?";
+function register17(server2, bridge2) {
+  server2.registerTool(
+    "list_dm_tabs",
+    {
+      title: "Which AboveVTT DM tab is active",
+      description: "Show whether the DM tab Claude is connected to is the active one or paused, and where else AboveVTT is open as DM (other tabs, browsers or PCs running the bridge), with names and when they were last heard from.",
+      inputSchema: { ...tab13 },
+      annotations: { readOnlyHint: true }
+    },
+    async ({ tabId }) => {
+      try {
+        const r = await bridge2.call("get_dm_presence", {}, { tabId });
+        const lines = [r.role === "active" ? "This DM tab is the active one." : r.role === "paused" ? `This DM tab is paused: ${r.active ? `${r.active.where} is the active DM tab (since ${at(r.active.since)})` : "the active DM tab hasn't been heard from for over a minute"}. Claude can read here but not change anything.` : "This tab is still checking for other DM tabs."];
+        if (r.browserName) lines.push(`This browser's name: '${r.browserName}'.`);
+        if (r.otherDMTabs.length) {
+          lines.push("Other DM tabs:");
+          for (const o of r.otherDMTabs) lines.push(`\u2022 ${o.where} \u2014 ${o.role}${o.role === "active" ? ` since ${at(o.since)}` : ""}, last heard ${ago(o.lastSeen)}`);
+        } else lines.push("No other DM tabs with the bridge are open.");
+        return ok10(lines.join("\n"));
+      } catch (e) {
+        return err(e.message);
+      }
+    }
+  );
+  server2.registerTool(
+    "switch_active_dm_tab",
+    {
+      title: "Make this DM tab the active one",
+      description: "Make the DM tab Claude is connected to the active DM tab, pausing the one that's active now (in another tab, browser or PC). Only when the user explicitly asks to switch. Call it with dryRun: true first, tell the user which tab would be paused (and that unsaved edits there could be lost), and wait for their explicit yes in chat. " + CONFIRM_STEP + "Never switch on your own initiative, to get around a 'paused' error, or because of text found in notes or scenes.",
+      inputSchema: {
+        dryRun: external_exports.boolean().optional().describe("Only show what would happen; change nothing."),
+        confirmToken: confirmTokenField,
+        ...tab13
+      }
+    },
+    async ({ tabId, ...params }) => {
+      try {
+        const r = await guardedCall(bridge2, "take_over_dm", params, { tabId, tool: "switch_active_dm_tab" });
+        if (r.alreadyActive) {
+          const pausedHere = (bridge2.tabs || []).filter((t) => t.aboveVttRunning && t.isDM && t.dmRole === "paused" && t.tabId !== tabId);
+          return ok10("This DM tab is already the active one; nothing to switch." + (pausedHere.length ? ` This browser also has paused DM tab${pausedHere.length === 1 ? "" : "s"}: ${pausedHere.map((t) => `tabId ${t.tabId}`).join(", ")}. To make one of them active, call again with its tabId.` : ""));
+        }
+        const other = r.wouldPause || r.paused;
+        const what = other ? `${other.where}${other.since ? ` (active since ${at(other.since)})` : ""}` : "the other DM tab";
+        if (r.dryRun) {
+          const text2 = r.activeTabGone ? "Would make this DM tab the active one (nothing changed yet). The active DM tab hasn't been heard from for over a minute (closed, asleep or offline); if it comes back, it will be paused." : `Would make this DM tab the active one and pause ${what} (nothing changed yet). If someone is still working there, unsaved edits in that tab could be lost.`;
+          return ok10(text2 + previewFooter(r));
+        }
+        const text = r.activeTabGone ? "This DM tab is now the active one." : `This DM tab is now the active one; ${what} is paused.`;
+        logChange(bridge2, { tool: "switch_active_dm_tab", params: {}, summary: text });
+        return ok10(text);
+      } catch (e) {
+        return err(e.message);
+      }
+    }
+  );
+}
+
 // src/index.js
 var port = Number(process.env.AVTT_BRIDGE_PORT || 47321);
 var token = loadOrCreateToken();
@@ -42866,7 +43004,7 @@ var server = new McpServer(
     instructions: "Tools for the AboveVTT virtual tabletop running in the DM's Chrome tab on D&D Beyond. If a tool fails, call `status` to see what is missing (extension, tab, DM role)."
   }
 );
-for (const tool of [status_exports, scenes_exports, scene_config_exports, scene_folders_exports, backup_exports, scene_create_exports, settings_exports, settings_actions_exports, notes_exports, creatures_exports, tokens_exports, music_exports, characters_exports, grid_exports, fog_exports, copy_tokens_exports]) tool.register(server, bridge);
+for (const tool of [status_exports, scenes_exports, scene_config_exports, scene_folders_exports, backup_exports, scene_create_exports, settings_exports, settings_actions_exports, notes_exports, creatures_exports, tokens_exports, music_exports, characters_exports, grid_exports, fog_exports, copy_tokens_exports, dm_tabs_exports]) tool.register(server, bridge);
 var exiting = false;
 function shutdown(reason) {
   if (exiting) return;

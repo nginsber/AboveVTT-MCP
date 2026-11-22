@@ -25,8 +25,20 @@
       isDM: running ? window.DM === true : false,
       aboveVttVersion: window.AVTT_VERSION ?? null,
       campaignName: window.CAMPAIGN_INFO?.name ?? null,
+      // review item 3b: "active" / "paused" when presence is running in a DM tab (presence.js), else null
+      dmRole: running && window.DM === true ? (window.AVTT_MCP?.presence?.role ?? null) : null,
+      // review item 3c: where the active DM tab is when this one is paused, and how many other DM tabs there are
+      ...(running && window.DM === true && window.AVTT_MCP?.presence ? window.AVTT_MCP.presence.summary() : {}),
     };
   }
+
+  // Methods that only read (plus any call with dryRun: true) still work in a paused DM tab.
+  const READ_ONLY = /^(status|list_.*|get_.*|find_tokens_to_copy|export_backup)$/;
+  const changesData = (method, params) => {
+    if (params?.dryRun === true || READ_ONLY.test(method)) return false;
+    if (method === "settings_action" && /^export/.test(String(params?.action || ""))) return false;
+    return true;
+  };
 
   /** Throws a clear error unless AboveVTT is running and the user is the DM. */
   function requireDM() {
@@ -39,7 +51,8 @@
   const folderType = () => (typeof ItemType !== "undefined" ? ItemType.Folder : "folder");
 
   const AVTT_MCP = {
-    version: "0.19.1",
+    version: "0.22.0",
+    identity: null, // { browserId, browserName } from background.js
     register(name, fn) { handlers[name] = fn; },
     /** Lets one handler reuse another (e.g. create_scene applying update_scene_config). */
     invoke(name, params) {
@@ -64,6 +77,7 @@
       sceneCount: Array.isArray(window.ScenesHandler?.scenes)
         ? window.ScenesHandler.scenes.filter((s) => s.itemType !== folderType()).length
         : null,
+      dmTabs: AVTT_MCP.presence && window.DM === true ? AVTT_MCP.presence.state() : null,
       bridgeScriptVersion: AVTT_MCP.version,
     };
   });
@@ -76,10 +90,19 @@
       send({ type: "info", info: info() });
       return;
     }
+    if (msg?.type === "identity") {
+      AVTT_MCP.identity = { browserId: String(msg.browserId || ""), browserName: String(msg.browserName || "") };
+      return;
+    }
     if (msg?.type !== "call") return;
     const fn = handlers[msg.method];
     try {
       if (!fn) throw new Error(`Unknown method '${msg.method}'. Update the AboveVTT MCP Bridge extension.`);
+      const presence = AVTT_MCP.presence;
+      if (presence?.role === "paused" && msg.method !== "take_over_dm" && changesData(msg.method, msg.params)) {
+        throw new Error(presence.pausedMessage() + " Reading and previews still work here. To make changes, ask to make this tab the " +
+          "active DM tab (or click Use here in it), or make them in the active tab.");
+      }
       const result = await fn(msg.params || {});
       send({ type: "result", id: msg.id, ok: true, result: result ?? null });
     } catch (err) {

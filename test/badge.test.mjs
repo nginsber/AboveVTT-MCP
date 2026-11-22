@@ -22,17 +22,28 @@ b = badgeFor("connected", [plainTab]);
 check("connected, campaign page without AboveVTT → orange, says start AboveVTT", b.state === O && /isn't running there/.test(b.title), JSON.stringify(b));
 b = badgeFor("connected", [playerTab]);
 check("connected, AboveVTT as player → orange, says DM view needed", b.state === O && /as a player/.test(b.title), JSON.stringify(b));
+b = badgeFor("connected", [{ ...dmTab, dmRole: "paused", dmActiveWhere: "'Laptop'" }]);
+check("connected, DM tab paused (another is active) → orange, says paused and where", b.state === O && /connected to Claude, paused/.test(b.title) && /active as DM in 'Laptop'/.test(b.title) && /Use here/.test(b.title), b.title);
+b = badgeFor("connected", [{ ...dmTab, dmRole: "active", dmOtherTabs: 1 }]);
+check("connected, active DM tab with one paused elsewhere → green, mentions it", b.state === G && /Also open as DM elsewhere: 1 tab, paused/.test(b.title), b.title);
+b = badgeFor("connected", [{ ...dmTab, dmRole: "paused", dmActiveWhere: "another tab in this browser" }, { ...dmTab, tabId: 9, dmRole: "active" }]);
+check("one tab active and one paused in this browser → green", b.state === G, b.title);
 b = badgeFor("connecting", [dmTab]);
 check("connecting → yellow MCP", b.state === Y && /connecting/.test(b.title), JSON.stringify(b));
 b = badgeFor("bad-token", [dmTab], "The server rejected the token. Copy it again from bridge-token.txt.");
 check("bad token → red MCP, with the error", b.state === R && /bridge-token\.txt/.test(b.title), JSON.stringify(b));
 b = badgeFor("disconnected", [dmTab], "Server not running (is Claude desktop open?)");
 check("server not running → grey MCP even with a DM tab open, tooltip says both", b.state === GREY && /not connected/.test(b.title) && /running as DM/.test(b.title), JSON.stringify(b));
-check("every tooltip ends with 'Click for settings.'", ["connected", "connecting", "bad-token", "disconnected"].every((s) => /Click for settings\.$/.test(badgeFor(s, []).title)));
+b = badgeFor("other-browser", [dmTab], "", { other: "Laptop", otherHasDMTab: true });
+check("another browser connected → grey, names it, says it stays while it has the DM tab", b.state === GREY && /using another browser \('Laptop'\)/.test(b.title) && /stays connected/.test(b.title), JSON.stringify(b));
+b = badgeFor("other-browser", [], "", { other: "", otherHasDMTab: false });
+check("…without a DM tab there: says this one takes over when it has one", /takes over when it has an AboveVTT DM tab/.test(b.title), b.title);
+check("every tooltip ends with 'Click for settings.'", ["connected", "connecting", "bad-token", "disconnected", "other-browser"].every((s) => /Click for settings\.$/.test(badgeFor(s, []).title)));
 
 // ---- background.js driving the icon ------------------------------------------------------------
 const badge = { text: null, color: null, title: null, iconCalls: 0 };
 let connectListener = null;
+const stored = {};
 const sockets = [];
 class FakeWS {
   static OPEN = 1; static CONNECTING = 0;
@@ -43,7 +54,7 @@ class FakeWS {
 const ev = () => ({ addListener() {} });
 const chrome = {
   runtime: { getManifest: () => ({ version: "test" }), onConnect: { addListener: (f) => { connectListener = f; } }, onMessage: ev(), onStartup: ev(), onInstalled: ev(), openOptionsPage() {} },
-  storage: { local: { get: async () => ({ port: 47321, token: "x".repeat(24) }) } },
+  storage: { local: { get: async (defaults) => ({ ...defaults, port: 47321, token: "x".repeat(24), browserName: "Desktop", ...stored }), set: async (o) => Object.assign(stored, o) }, onChanged: ev() },
   action: {
     setIcon: ({ path }) => { badge.color = stateOf(path); badge.path = path; badge.iconCalls++; },
     setBadgeText: ({ text }) => { badge.text = text; },
@@ -52,7 +63,7 @@ const chrome = {
   },
   permissions: { contains: async () => false },
 };
-const ctx = { chrome, WebSocket: FakeWS, setTimeout, clearTimeout, console, JSON, Date, Map, Math, Number, String };
+const ctx = { chrome, WebSocket: FakeWS, setTimeout, clearTimeout, console, JSON, Date, Map, Math, Number, String, crypto: globalThis.crypto };
 ctx.self = ctx;
 ctx.importScripts = (...files) => { for (const f of files) vm.runInContext(fs.readFileSync("extension/" + f, "utf8"), ctx); };
 vm.createContext(ctx);
@@ -89,6 +100,25 @@ const ws3 = sockets.at(-1);
 ws3.onclose?.({ code: 4001, reason: "" });
 check("server rejects the token → red", badge.color === R, JSON.stringify(badge));
 
+// ---- review item 3a: another browser is connected -------------------------------------------
+await new Promise((r) => setTimeout(r, 1100));
+let ws4 = sockets.at(-1);
+await new Promise((r) => setTimeout(r, 10));
+const hello = ws4.sent.find((m) => m.type === "hello");
+check("hello carries a browser ID (made once and stored) and the name", hello && /^[0-9a-f-]{36}$/.test(hello.browserId) && stored.browserId === hello.browserId && hello.browserName === "Desktop", JSON.stringify(hello));
+onDisc(); // no DM tab open in this browser now
+ws4.onclose({ code: 4002, reason: JSON.stringify({ other: "Laptop", otherHasDMTab: true }) });
+check("turned away → grey, tooltip names the other browser", badge.color === GREY && /'Laptop'/.test(badge.title), badge.title);
+const before4 = sockets.length;
+await new Promise((r) => setTimeout(r, 1500));
+check("…and doesn't hammer the server (waits ~30 s, not 1 s)", sockets.length === before4, `${sockets.length - before4} new connection(s)`);
+connectListener(port);
+onMsg({ type: "info", info: { ...dmTab, tabId: undefined } });
+await new Promise((r) => setTimeout(r, 700));
+check("…but asks again at once when this browser gets an AboveVTT DM tab", sockets.length === before4 + 1, `${sockets.length - before4} new connection(s)`);
+const hello2 = (await new Promise((r) => setTimeout(() => r(sockets.at(-1)), 10))).sent.find((m) => m.type === "hello");
+check("…with the same browser ID", hello2?.browserId === hello.browserId, JSON.stringify(hello2));
+
 // ---- the manifest points at icons that exist ---------------------------------------------------
 const manifest = JSON.parse(fs.readFileSync("extension/manifest.json", "utf8"));
 const iconFiles = [...Object.values(manifest.icons || {}), ...Object.values(manifest.action?.default_icon || {})];
@@ -123,6 +153,24 @@ for (const s of states) for (const size of [16, 32]) {
   if (w !== size || hits < (size === 16 ? 20 : 80)) check(`${s}${size}.png has MCP in its colour`, false, `${w}x${h}, ${hits} pixels`);
 }
 check("every status icon has 'MCP' in its own colour, at the right size", true);
+
+// ---- review item 3b: calls go to the active DM tab, not a paused one ------------------------------
+const wsCall = sockets.at(-1);
+wsCall.onmessage({ data: JSON.stringify({ type: "welcome" }) });
+const got = [];
+const mkPort = (id, info) => {
+  let onM;
+  const p = { name: "avtt-tab", sender: { tab: { id, url: "https://www.dndbeyond.com/campaigns/8275104" } },
+    onMessage: { addListener: (f) => { onM = f; } }, onDisconnect: { addListener() {} }, postMessage: (m) => { if (m.type === "call") got.push(id); } };
+  connectListener(p);
+  onM({ type: "info", info });
+  return p;
+};
+const { tabId: _omit, ...dmInfo } = dmTab; // real tabs don't report a tabId of their own
+mkPort(21, { ...dmInfo, dmRole: "active" });
+mkPort(22, { ...dmInfo, dmRole: "paused" }); // reported more recently
+wsCall.onmessage({ data: JSON.stringify({ type: "call", id: "c1", method: "status", params: {} }) });
+check("a call without a tab goes to the active DM tab, not the more recent paused one", got.at(-1) === 21, JSON.stringify(got));
 
 console.log(fails ? `${fails} FAILED` : "all passed");
 process.exit(fails ? 1 : 0);

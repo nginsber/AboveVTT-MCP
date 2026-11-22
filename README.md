@@ -20,13 +20,14 @@ See **[INSTALL.md](INSTALL.md)** for setup.
 You need to be the **DM**, with the campaign open in Chrome and AboveVTT running. Every change is also written to a change log on your PC (see [Safety](#safety)).
 
 ### Checking the connection
-- **`status`**: is the extension connected, is AboveVTT running, are you the DM, which campaign and scene, which AboveVTT version.
+- **`status`**: is the extension connected, is AboveVTT running, are you the DM, which campaign and scene, which AboveVTT version, and whether this DM tab is the active one or paused.
+- **`list_dm_tabs`** / **`switch_active_dm_tab`**: where else AboveVTT is open as DM (other tabs, browsers or PCs running the bridge), and, when you ask, making this browser's DM tab the active one. Example: *"Make this the active DM tab."* Claude shows which tab would be paused and waits for your yes.
 - **The toolbar icon** shows the same at a glance: AboveVTT's red "A" with **MCP** underneath, and the colour of the letters tells you the state. Hover over it for details, such as which campaign is open, or why it isn't ready.
 
 | MCP colour | Meaning |
 |---|---|
 | Green | Ready: connected to the MCP server (Claude desktop), and AboveVTT is running as DM in a campaign tab. |
-| Orange | Connected to the server, but no AboveVTT DM tab: no campaign open, AboveVTT not started yet, or running as a player. |
+| Orange | Connected to the server, but no usable AboveVTT DM tab: no campaign open, AboveVTT not started yet, running as a player, or this DM tab is paused because AboveVTT is active as DM somewhere else. |
 | Yellow | Connecting to the server. |
 | Grey | Can't reach the server. Is Claude desktop running? |
 | Red | The server rejected the token. Copy it again from `bridge-token.txt` into the extension's options page. |
@@ -100,13 +101,14 @@ The icon changes within a few seconds of opening or closing a campaign tab, star
 - **Claude asks before anything permanent.** Deletes, imports, resets and the Settings buttons that change data are previewed first (`dryRun`), and Claude has to wait for your "yes" in chat. The server enforces the preview: the real change needs the single-use `confirmToken` from a preview of exactly the same request (valid 10 minutes), and it is refused if what would change is no longer the same as in the preview. AboveVTT's own pop-up confirmations are not used, because they would freeze the connection.
 - **No live-session control.** The connector doesn't switch the players' scene, place tokens on the map, or play, pause or change the volume of music. Those stay with you. It won't edit the playlist that's loaded in the mixer while music is playing. The one exception is `set_fog`: if players are on that scene, they see the fog change at once. By your choice it runs without asking first; the old fog is always saved so it can be restored.
 - **Everything is checked before saving.** Unknown setting names, bad colours, links that aren't http(s), duplicate names and similar mistakes are caught before anything is changed.
+- **One DM tab at a time.** If AboveVTT is open as DM in more than one place (another tab, another browser, or another PC), each DM tab running this bridge finds the others, and only the first one is used. Later DM tabs are **paused**: an overlay covers the page so nothing is changed there by accident, and Claude can read but not change anything through them. Switching is never automatic: click **Use here** in the paused tab and confirm (the Yes button waits 2 seconds to avoid accidental clicks), or ask Claude to switch, which also needs a preview and your yes. If the active tab is closed or its PC goes to sleep, the paused tab says so after about a minute, and still waits for you. DM tabs without this bridge can't be detected.
 - **Change log.** Every change is added to `%USERPROFILE%\.abovevtt-mcp\change-log.jsonl`. Ask Claude *"show the change log"*.
-- **Local only.** The server listens on `127.0.0.1` only. It accepts only the Chrome extension, which has to present a secret token stored in `%USERPROFILE%\.abovevtt-mcp\bridge-token.txt`. Nothing is sent anywhere else. Like any connector, what Claude reads from your campaign (notes, stat blocks, scene names) becomes part of your Claude conversation.
+- **Local only.** The server listens on `127.0.0.1` only. It accepts only the Chrome extension, which has to present a secret token stored in `%USERPROFILE%\.abovevtt-mcp\bridge-token.txt`. Only one browser can be connected at a time (the one with the active AboveVTT DM tab). Nothing is sent anywhere else, apart from the small "DM tab here" message each DM tab sends every 30 seconds through AboveVTT's own message channel, so other DM tabs can find it. It holds random IDs, the browser name you chose and the bridge version. Players' browsers receive it too, as with all AboveVTT messages, but AboveVTT ignores it and nothing is shown. Like any connector, what Claude reads from your campaign (notes, stat blocks, scene names) becomes part of your Claude conversation.
 - **Back up first.** Ask *"back up the campaign"* before big changes. It's AboveVTT's normal export, so you can restore it with AboveVTT's own import.
 
 ## Limits
 
-- **DM only**, one campaign tab at a time. If several AboveVTT tabs are open, the tools can be pointed at one.
+- **DM only**, one active DM tab at a time (see *One DM tab at a time* above).
 - **Images and audio are links only.** Uploading files needs AboveVTT's Patreon storage, which isn't supported.
 - **Player characters:** their name, HP, AC and standard conditions come from their D&D Beyond character sheet, so AboveVTT doesn't let the DM set those on the token. Markers, auras, image, size, settings and notes do work.
 - **The music track library is per browser.** AboveVTT keeps it in Chrome's storage, shared by all your campaigns. Playlists are per campaign.
@@ -117,7 +119,8 @@ The icon changes within a few seconds of opening or closing a campaign tab, star
 
 ```
 extension/   Chrome extension (manifest v3). page.js + one file per feature run inside the campaign tab.
-             background.js keeps the connection to the server; badge.js decides the toolbar icon; icons/ holds the icons.
+             background.js keeps the connection to the server; badge.js decides the toolbar icon; icons/ holds the icons;
+             presence.js finds other DM tabs and pauses all but the active one.
 server/      MCP server. src/ is the source, dist/abovevtt-mcp.mjs the bundled file Claude desktop runs.
 test/        jsdom tests that load the real AboveVTT source from a sibling ../AboveVTT folder.
 tools/       make_status_icons.py rebuilds the toolbar icons (needs Python and Pillow).

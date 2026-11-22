@@ -94,7 +94,7 @@ You don't need to run `npm install`. `server\dist\abovevtt-mcp.mjs` is already b
 2. Turn on **Developer mode** (top right).
 3. Click **Load unpacked** and choose `<folder>\extension`.
 4. From the puzzle-piece menu, **pin** "AboveVTT MCP Bridge" so you can see its badge.
-5. Click the extension's icon to open its options page. Paste the token, leave the port at **47321**, and click **Save and connect**.
+5. Click the extension's icon to open its options page. Paste the token, leave the port at **47321**, optionally give this browser a name (for example *Desktop*), and click **Save and connect**.
 
 6. Optional, for grid detection: on the same options page click **Allow reading map images** and accept Chrome's prompt. This lets the extension download a scene's map image to measure its grid. You can remove it again from the same page.
 
@@ -103,7 +103,7 @@ The extension's toolbar icon is AboveVTT's red "A" with **MCP** written undernea
 | Icon | Meaning |
 |---|---|
 | **MCP** in green | Ready: connected to the server, and AboveVTT is running as DM in a campaign tab. |
-| **MCP** in orange | Connected to the server, but no AboveVTT DM tab: no campaign open, AboveVTT not started, or running as a player. |
+| **MCP** in orange | Connected to the server, but no usable AboveVTT DM tab: no campaign open, AboveVTT not started, running as a player, or this DM tab is paused because AboveVTT is active as DM somewhere else. |
 | **MCP** in yellow | Connecting to the server. |
 | **MCP** in grey | Can't reach the server. Is Claude desktop running? |
 | **MCP** in red | The token is wrong. Copy it again. |
@@ -127,6 +127,8 @@ See [README.md](README.md) for everything it can do.
 | Claude has no AboveVTT tools | Check the JSON: commas, double backslashes, correct paths. Then fully quit and restart Claude desktop. **Settings → Desktop app → Extensions → Local MCP servers** shows the server's state and log. |
 | Icon shows MCP in grey | Claude desktop must be running. Then click **Save and connect** again. |
 | Icon shows MCP in red | Copy the token again from `bridge-token.txt`. |
+| Icon shows MCP in grey, tooltip says Claude is using another browser | Only one browser at a time can be connected. The one with the AboveVTT DM tab is used; if both have one, the first stays. Close AboveVTT in the other browser, or remove the bridge there. |
+| A grey overlay says "This DM tab is paused" | AboveVTT is also open as DM somewhere else (the overlay says where), and that one is in use. Close one of them, click **Use here** to switch to this one, or ask Claude to make this the active DM tab. |
 | Icon shows MCP in orange | Open the campaign as DM and start AboveVTT. If it's already open, reload the tab. The tooltip says which it is. |
 | "no campaign tab is open" | Reload the D&D Beyond campaign tab. |
 | "not running as the DM" | Open the campaign from the DM side and start AboveVTT. |
