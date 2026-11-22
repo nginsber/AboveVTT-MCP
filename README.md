@@ -129,7 +129,16 @@ server/      MCP server. src/ is the source, dist/abovevtt-mcp.mjs the bundled f
 test/        jsdom tests that load the real AboveVTT source from a sibling ../AboveVTT folder.
 tools/       make_status_icons.py rebuilds the toolbar icons (needs Python and Pillow).
 ROADMAP.md   Build history, design decisions and test results for each step.
+LICENSE      GNU Affero General Public License v3.0.
 ```
+
+## License
+
+Copyright © 2026 nginsber and contributors.
+
+AboveVTT MCP is free software: you can redistribute it and/or modify it under the terms of the [GNU Affero General Public License](LICENSE) as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. It is distributed in the hope that it will be useful, but **without any warranty**; without even the implied warranty of merchantability or fitness for a particular purpose. See [LICENSE](LICENSE) for the full text.
+
+This is the same license as AboveVTT. The bundled server (`server/dist/abovevtt-mcp.mjs`) also contains the MCP SDK, `ws` and `zod`, which are under the MIT license.
 
 ## Not affiliated
 

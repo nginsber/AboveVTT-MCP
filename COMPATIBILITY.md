@@ -13,7 +13,7 @@ The setups AboveVTT MCP has been tested on. It may work on others, but they have
 | **Node.js** | 24.21.0 | 26.13.1 LTS |
 | **AboveVTT** | 1.61 | 1.61; a second Mac on 1.62 (only `status` and `list_scenes` tried) |
 | **AboveVTT MCP** | server 0.23.0, extension 0.25.0 | built from source with `npm ci`; identical to `server/dist/abovevtt-mcp.mjs` |
-| **Install guide** | [INSTALL.md](INSTALL.md) | [INSTALL.md](INSTALL.md), see *On a Mac* |
+| **Install guide** | [INSTALL.md → Windows](INSTALL.md#windows) | [INSTALL.md → macOS](INSTALL.md#macos) |
 
 ## What was tried
 
