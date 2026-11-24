@@ -107,8 +107,10 @@
       const e = EXPORTS[action];
       need(e.fn);
       if (action === "exportCurrentScene" && !window.CURRENT_SCENE_DATA?.id) throw new Error("No scene is open to export.");
-      const filename = e.file();
-      window[e.fn]();
+      // Same date-and-time file name as export_backup (AboveVTT's exports are synchronous, so download() is
+      // only renamed while this one runs).
+      const { names } = await M.withTimestampedDownloads(() => window[e.fn]());
+      const filename = names[names.length - 1] || M.stampFileName(e.file());
       return { action, done: true, filename, contains: e.what, savedTo: "Chrome's Downloads folder" };
     }
 

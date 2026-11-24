@@ -48,11 +48,42 @@
   // eslint-disable-next-line no-undef
   const folderType = () => (typeof ItemType !== "undefined" ? ItemType.Folder : "folder");
 
+  // ---- date and time in export file names ----
+  const pad = (n) => String(n).padStart(2, "0");
+  /** "2026-11-23 18-45-07": sorts correctly, and has no ':' (not allowed in Windows file names). */
+  const timestamp = (d = new Date()) =>
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
+  /** AboveVTT's "Name-2026-11-23.abovevtt" / "Name-2026-11-23-journal.abovevtt" → the same with date and time. */
+  function stampFileName(filename, stamp = timestamp()) {
+    const f = String(filename ?? "");
+    const re = /-\d{4}-\d{1,2}-\d{1,2}(?=(-[A-Za-z]+)?\.abovevtt$)/;
+    if (re.test(f)) return f.replace(re, `-${stamp}`);
+    return /\.abovevtt$/i.test(f) ? f.replace(/\.abovevtt$/i, ` ${stamp}.abovevtt`) : f;
+  }
+  /**
+   * Runs `run` with AboveVTT's download() giving its .abovevtt files a date-and-time name instead of date only,
+   * then puts download() back. AboveVTT itself is unchanged; only exports started by the connector are renamed.
+   * Returns { result, names } (the file names actually used).
+   */
+  async function withTimestampedDownloads(run) {
+    const original = window.download;
+    const names = [];
+    if (typeof original !== "function") return { result: await run(), names };
+    const stamp = timestamp();
+    window.download = function (data, filename, ...rest) {
+      const name = stampFileName(filename, stamp);
+      names.push(name);
+      return original.call(this, data, name, ...rest);
+    };
+    try { return { result: await run(), names }; }
+    finally { if (window.download !== original) window.download = original; }
+  }
+
   let identity = { browserId: "", browserName: "" }; // set by background.js through __avttMcpSetIdentity
   let sealed = false;
 
   const AVTT_MCP = {
-    version: "0.25.0",
+    version: "0.27.0",
     get identity() { return identity; },
     register(name, fn) {
       if (sealed) throw new Error("The AboveVTT MCP Bridge is already loaded; no more methods can be added.");
@@ -71,6 +102,9 @@
     requireDM,
     info,
     folderType,
+    timestamp,
+    stampFileName,
+    withTimestampedDownloads,
     /** How names are compared in lookups: trimmed, any case, and straight / curly quotes treated the same
      *  (names the MCP writes get curly quotes; see server/src/names.js). */
     nameKey: (s) => String(s ?? "").normalize("NFC").trim().toLowerCase()
