@@ -10,7 +10,7 @@ export function register(server, bridge) {
     {
       title: "Back up the campaign (AboveVTT Export)",
       description:
-        "Run AboveVTT's built-in Export (the EXPORT button on the Settings tab). Chrome downloads a .abovevtt file " +
+        "Run AboveVTT's built-in Export (the EXPORT button on the Settings tab). Chrome downloads a .abovevtt file, named with the campaign, date and time (e.g. 'Frozen Sick-2026-11-23 18-45-07.abovevtt'), " +
         "with all scenes, custom tokens, notes, journal chapters, soundpads, mixer state and music library into the " +
         "Downloads folder. It can be restored with AboveVTT's Import. Explored fog is not included.",
       inputSchema: {
@@ -28,7 +28,7 @@ export function register(server, bridge) {
           `Saved to: ${r.savedTo}  (took ${r.seconds}s)`,
           `Contains: ${c.scenes} scenes in ${c.sceneFolders} folders, ${c.tokenCustomizations ?? "?"} token customizations, ` +
             `${c.notes ?? "?"} notes, ${c.journalChapters ?? "?"} journal chapters, ${c.soundpads ?? "?"} soundpads, ${c.musicTracks ?? "?"} music tracks.`,
-          "If a file with that name already exists, Chrome adds a number, e.g. (1).",
+          "The file name has the date and time, so backups made the same day don't replace or rename each other.",
         ].join("\n");
         logChange(bridge, { tool: "export_backup", params: {}, summary: `Downloaded ${r.filename}` });
         return { content: [{ type: "text", text }] };

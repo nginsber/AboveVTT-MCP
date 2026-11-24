@@ -23,6 +23,8 @@ import * as gridTool from "./tools/grid.js";
 import * as fogTool from "./tools/fog.js";
 import * as copyTokensTool from "./tools/copy_tokens.js";
 import * as dmTabsTool from "./tools/dm_tabs.js";
+import * as auditTool from "./tools/audit.js";
+import * as compareBackupsTool from "./tools/compare_backups.js";
 
 const port = Number(process.env.AVTT_BRIDGE_PORT || 47321);
 const token = loadOrCreateToken();
@@ -41,7 +43,7 @@ const server = new McpServer(
 );
 
 // Each step of the build adds one module here.
-for (const tool of [statusTool, scenesTool, sceneConfigTool, sceneFoldersTool, backupTool, sceneCreateTool, settingsTool, settingsActionsTool, notesTool, creaturesTool, tokensTool, musicTool, charactersTool, gridTool, fogTool, copyTokensTool, dmTabsTool]) tool.register(server, bridge);
+for (const tool of [statusTool, scenesTool, sceneConfigTool, sceneFoldersTool, backupTool, sceneCreateTool, settingsTool, settingsActionsTool, notesTool, creaturesTool, tokensTool, musicTool, charactersTool, gridTool, fogTool, copyTokensTool, dmTabsTool, auditTool, compareBackupsTool]) tool.register(server, bridge);
 
 // Exit when the client goes away. Otherwise the open port and timers keep this
 // process alive after Claude restarts, and the stale copy holds the port.

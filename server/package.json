@@ -1,6 +1,6 @@
 {
   "name": "abovevtt-mcp",
-  "version": "0.23.0",
+  "version": "0.25.3",
   "description": "MCP server for AboveVTT (via the AboveVTT MCP Bridge Chrome extension)",
   "license": "AGPL-3.0-or-later",
   "scripts": {

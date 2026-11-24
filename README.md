@@ -45,8 +45,9 @@ The icon changes within a few seconds of opening or closing a campaign tab, star
 - **`get_fog` / `set_fog`**: a scene's fog of war. `set_fog` does what the two ALL buttons on the FOG menu do, **hide all** or **reveal all**, on any scene, without opening it. Unlike those buttons it can be undone: the old fog is saved first, and `set_fog` with **restore** puts it back. Drawing individual fog shapes isn't supported.
 
 ### Backups and the Settings tab
-- **`export_backup`**: AboveVTT's EXPORT button. It downloads a `.abovevtt` backup of the whole campaign to your Downloads folder.
+- **`export_backup`**: AboveVTT's EXPORT button. It downloads a `.abovevtt` backup of the whole campaign to your Downloads folder, named with the date **and time**, for example `Frozen Sick-2026-11-23 18-45-07.abovevtt`, so several backups on one day stay apart and sort in order. The Settings tab exports (current scene, tokens, journal, audio) are named the same way, for example `Frozen Sick-2026-11-23 18-45-07-journal.abovevtt`. AboveVTT's own EXPORT button is unchanged and still uses the date only.
 - **`list_backup_files` / `import_backup`**: list your `.abovevtt` files, preview what importing one would change, then import it.
+- **`compare_backups`**: compare two backups and see what changed between them: scenes and folders added, removed, renamed or moved, scene settings, fog and the tokens on each scene, My Tokens, journal notes (showing the changed text) and folders, tracks and playlists. It only reads the two files, so AboveVTT doesn't need to be open.
 - **`list_settings` / `set_setting` / `reset_setting`**: every option on the Settings tab: AboveVTT settings, token default settings and scene default settings.
 - **`run_settings_action`**: the Settings tab buttons:
   - export the current scene, tokens, journal or audio
@@ -90,6 +91,16 @@ The icon changes within a few seconds of opening or closing a campaign tab, star
 - **`list_tracks` / `add_tracks` / `update_track` / `delete_tracks`**: the Sounds tab's track library, added by public link (for example Dropbox), with **tags**. Tags are how AboveVTT now groups the old soundpads.
 - **`list_playlists` / `create_playlist` / `update_playlist` / `delete_playlist`**: the mixer's playlists. A playlist can be built from track names or from everything with a tag.
 
+### Campaign audit (read-only)
+- **`audit_campaign`**: lists what's broken, without changing anything:
+  - scene maps (player and DM map, including YouTube video maps) that no longer load, and scenes with no map;
+  - token images, both in My Tokens and on tokens placed on every scene;
+  - audio tracks and the tracks in playlists;
+  - images and links inside journal notes;
+  - empty scene, My Tokens and journal folders.
+
+  Links are checked the way AboveVTT loads them, so a Google Drive, Dropbox or OneDrive share link is checked after AboveVTT converts it. Each problem says where it's used and why it failed (not found, removed from Imgur, opens a web page instead of an image, refused, points at your home network…). One dead link used by many tokens is listed once. Links are checked by the connector on your PC, never reach your local network, and links to AboveVTT's own cloud storage are skipped. Ask for one area ("audit the audio") to make it quicker.
+
 ### Player characters (read-only)
 - **`list_characters`**: the party from D&D Beyond, with player, class and level, AC, HP, passive Perception, speed, conditions, inspiration and death saves.
 - **`get_character`**: one full sheet: abilities and saves, skills, attacks, spell DC, senses, defences, proficiencies, class features, feats, spells and slots, inventory, money, background and personality. The player's own notes (backstory, allies…) are only included when you ask. Nothing is ever changed on D&D Beyond.
@@ -126,6 +137,7 @@ extension/   Chrome extension (manifest v3). page.js + one file per feature run 
              presence.js finds other DM tabs and pauses all but the active one; seal.js locks the bridge once
              loaded. relay.js only reports tabs opening and closing; commands run through chrome.scripting.
 server/      MCP server. src/ is the source, dist/abovevtt-mcp.mjs the bundled file Claude desktop runs.
+             src/linkcheck.js checks links for audit_campaign (with src/netguard.js, the server's local-network guard).
 test/        jsdom tests that load the real AboveVTT source from a sibling ../AboveVTT folder.
 tools/       make_status_icons.py rebuilds the toolbar icons (needs Python and Pillow).
 ROADMAP.md   Build history, design decisions and test results for each step.

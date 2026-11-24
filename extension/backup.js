@@ -7,7 +7,15 @@
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  M.register("export_backup", async ({ timeoutSeconds = 180 } = {}) => {
+  // The file gets a date-and-time name ("Frozen Sick-2026-11-23 18-45-07.abovevtt") so backups made the same day
+  // don't collide; AboveVTT's own EXPORT button still names files by date only.
+  M.register("export_backup", async (params = {}) => {
+    const { result, names } = await M.withTimestampedDownloads(() => exportBackup(params));
+    if (names.length) result.filename = names[names.length - 1];
+    return result;
+  });
+
+  async function exportBackup({ timeoutSeconds = 180 } = {}) {
     M.requireDM();
     if (typeof window.export_file !== "function") {
       throw new Error("AboveVTT's export function was not found. This AboveVTT version may not be supported yet.");
@@ -21,9 +29,7 @@
     const before = Number(localStorage.getItem(stampKey) || 0);
     const started = Date.now();
 
-    const d = new Date();
-    const datetime = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-    const filename = `${info.name}-${datetime}.abovevtt`;
+    const filename = M.stampFileName(`${info.name}-0000-0-0.abovevtt`); // replaced by the real name once AboveVTT downloads it
 
     // AboveVTT's own export. For very large campaigns it falls back to fetching scenes one by
     // one and resolves before that finishes, so we wait for the timestamp instead.
@@ -79,5 +85,5 @@
     }
     throw new Error(`The export did not finish within ${timeoutSeconds} seconds. Check the AboveVTT tab: it may still be working, ` +
       "or Chrome may be asking whether to allow the download.");
-  });
+  }
 })();
